@@ -1,10 +1,10 @@
 <template>
-  <div>
-    init frontend project
-  </div>
+  <Search />
 </template>
 
 <script setup>
+import Search from './components/Search.vue'
 </script>
+
 
 <style scoped></style>
