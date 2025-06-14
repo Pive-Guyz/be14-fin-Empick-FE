@@ -1,0 +1,250 @@
+<template>
+    <v-container class="pa-0" fluid>
+        <v-row justify="center">
+            <v-col cols="12" md="10" lg="8" xl="7">
+                <h2 class="font-weight-bold mb-8 mt-8" style="font-size:2rem;">부서 관리</h2>
+                <OrgBoxList v-if="!search" v-model="items">
+                    <template #item="{ element, index }">
+                        <OrgAccordionItem :item="element">
+                            <OrgAccordionDetail :item="element" />
+                        </OrgAccordionItem>
+                    </template>
+                </OrgBoxList>
+                <div v-else>
+                    <div v-for="(element, index) in filteredItems" :key="element.id">
+                        <OrgAccordionItem :item="element">
+                            <OrgAccordionDetail :item="element" />
+                        </OrgAccordionItem>
+                    </div>
+                </div>
+            </v-col>
+        </v-row>
+    </v-container>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue';
+import OrgBoxList from '@/components/orgstructure/OrgBoxList.vue';
+import OrgAccordionItem from '@/components/orgstructure/OrgAccordionItem.vue';
+import OrgAccordionDetail from '@/components/orgstructure/OrgAccordionDetail.vue';
+
+const items = ref([
+    { id: 1, name: '개발' },
+    { id: 2, name: '인사' },
+    { id: 3, name: '회계' },
+    { id: 4, name: '법무' },
+    { id: 5, name: '영업' },
+]);
+
+const search = ref('');
+const filteredItems = computed({
+    get() {
+        if (!search.value) return items.value;
+        return items.value.filter(item => item.name.includes(search.value));
+    },
+    set(newList) {
+        // 드래그 시 순서 반영
+        if (!search.value) {
+            items.value = newList;
+        }
+    }
+});
+
+const openedIndex = ref(null);
+function toggleAccordion(idx) {
+    openedIndex.value = openedIndex.value === idx ? null : idx;
+}
+
+function onSearch() {
+    // v-model로 자동 반영
+}
+
+function onAddDept() {
+    const name = prompt('새 부서명을 입력하세요');
+    if (!name || !name.trim()) {
+        alert('부서명을 입력하세요.');
+        return;
+    }
+    if (items.value.some(item => item.name === name.trim())) {
+        alert('이미 존재하는 부서명입니다.');
+        return;
+    }
+    items.value.push({ id: Date.now(), name: name.trim() });
+    search.value = '';
+}
+
+const sampleMembers = [
+    { name: '서민중', dept: '인사' },
+    { name: '곽우석', dept: '영업' },
+    { name: '김석희', dept: '개발' },
+    { name: '최혜민', dept: '회계' },
+    { name: '이상모', dept: '개발' },
+];
+</script>
+
+<style scoped>
+.v-container {
+    min-height: 100vh;
+    background: #fff;
+}
+
+.draggable-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.drag-handle-box {
+    display: flex;
+    align-items: center;
+    margin-right: 16px;
+    height: 100%;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: #222;
+}
+
+.search-input {
+    font-size: 1.2rem;
+    height: 56px;
+}
+
+.v-btn {
+    font-size: 1.2rem;
+    padding: 12px 36px;
+    border-radius: 6px;
+    min-width: 120px;
+    min-height: 48px;
+    box-shadow: 0 2px 8px rgba(91, 140, 77, 0.08);
+}
+
+.dept-item {
+    flex: 1;
+    border: 2px solid #bdbdbd;
+    border-radius: 12px 12px 12px 12px;
+    overflow: hidden;
+    padding: 16px 32px;
+    font-size: 1.15rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    cursor: pointer;
+    min-height: 56px;
+}
+
+.dept-item:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+    border-color: #5b8c4d;
+}
+
+.accordion-detail-card {
+    border: 2px solid #bdbdbd;
+    border-radius: 12px;
+    background: #fff;
+    margin-bottom: 32px;
+    margin-left: 44px;
+    margin-top: 0;
+    padding: 32px 32px 40px 32px;
+    min-width: 0;
+}
+
+.accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+}
+
+.dept-name-input {
+    flex: 1;
+    max-width: 340px;
+    margin-right: 24px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.close-icon {
+    font-size: 2rem;
+    margin-left: 12px;
+    cursor: pointer;
+}
+
+.accordion-content {
+    display: flex;
+    gap: 40px;
+    margin-top: 16px;
+}
+
+.desc-area {
+    flex: 1;
+}
+
+.desc-label {
+    font-weight: bold;
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+}
+
+.desc-box {
+    border: 2px solid #bdbdbd;
+    border-radius: 8px;
+    min-height: 180px;
+    padding: 24px 20px;
+    font-size: 1.1rem;
+    background: #fafafa;
+}
+
+.member-area {
+    width: 320px;
+    min-width: 220px;
+}
+
+.member-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.assign-btn {
+    min-width: 120px;
+    font-size: 1.05rem;
+}
+
+.member-list {
+    border: 2px solid #bdbdbd;
+    border-radius: 8px;
+    background: #fafafa;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 18px 16px;
+}
+
+.member-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 1.08rem;
+}
+
+.member-item:last-child {
+    margin-bottom: 0;
+}
+
+.member-name {
+    margin-right: 16px;
+    min-width: 70px;
+}
+
+.member-dept {
+    color: #888;
+    font-size: 1rem;
+}
+</style>
