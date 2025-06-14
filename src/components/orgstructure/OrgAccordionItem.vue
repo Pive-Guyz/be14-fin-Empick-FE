@@ -1,9 +1,6 @@
 <template>
     <div>
         <div class="draggable-row">
-            <div class="drag-handle-box">
-                <v-icon class="drag-handle" size="28" @mousedown.stop>mdi-dots-grid</v-icon>
-            </div>
             <div class="dept-item" @click="toggleAccordion">
                 <span>{{ item.name }}</span>
                 <v-icon class="ml-auto">{{ isOpen ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
@@ -82,7 +79,6 @@ function toggleAccordion() {
     border-radius: 12px;
     background: #fff;
     margin-bottom: 32px;
-    margin-left: 44px;
     margin-top: 0;
     padding: 32px 32px 40px 32px;
     min-width: 0;
