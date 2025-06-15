@@ -22,10 +22,11 @@ import { defineProps, defineEmits } from 'vue'
 
 const props = defineProps({
     modelValue: {
-        type: Boolean,
+        type: Object,
         required: true
     }
 })
+
 const emit = defineEmits(['update:modelValue'])
 
 function close() {

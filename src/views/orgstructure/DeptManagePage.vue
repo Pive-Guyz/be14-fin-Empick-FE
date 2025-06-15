@@ -27,7 +27,7 @@
                 <OrgBoxList v-if="!search" v-model="deptStore.depts" @update:modelValue="onDeptListUpdate">
                     <template #item="{ element }">
                         <OrgAccordionItem :item="element" v-model="element.isOpen">
-                            <OrgAccordionDetail :item="element" @update="onDeptUpdate" />
+                            <DeptAccordionDetail :item="element" @update="onDeptUpdate" />
                         </OrgAccordionItem>
                     </template>
                 </OrgBoxList>
@@ -35,7 +35,7 @@
                 <div v-else>
                     <div v-for="element in filteredItems" :key="element.id">
                         <OrgAccordionItem :item="element" v-model="element.isOpen">
-                            <OrgAccordionDetail :item="element" @update="onDeptUpdate" />
+                            <DeptAccordionDetail :item="element" @update="onDeptUpdate" />
                         </OrgAccordionItem>
                     </div>
                 </div>
@@ -50,7 +50,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useDeptStore } from '@/stores/deptStore';
 import OrgBoxList from '@/components/orgstructure/OrgBoxList.vue';
 import OrgAccordionItem from '@/components/orgstructure/OrgAccordionItem.vue';
-import OrgAccordionDetail from '@/components/orgstructure/OrgAccordionDetail.vue';
+import DeptAccordionDetail from '@/components/orgstructure/DeptAccordionDetail.vue';
 import OrgAccordionRegistItem from '@/components/orgstructure/OrgAccordionRegistItem.vue';
 import OrgAccordionRegistDetail from '@/components/orgstructure/OrgAccordionRegistDetail.vue';
 
