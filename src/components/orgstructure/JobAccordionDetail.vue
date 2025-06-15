@@ -9,7 +9,7 @@
             </div>
             <div class="header-actions">
                 <v-btn variant="outlined" class="mr-2" @click="onUpdate" :disabled="!localItem?.id">수정</v-btn>
-                <v-btn variant="outlined" :color="localItem?.isActive === 'INACTIVE' ? 'success' : 'error'"
+                <v-btn variant="outlined" :color="localItem?.isActive === 0 ? 'success' : 'error'"
                     @click="onToggleActive" :disabled="!localItem?.id">
                     {{ getActiveButtonText }}
                 </v-btn>
@@ -23,19 +23,11 @@
             </div>
             <div class="member-area">
                 <div class="member-header">
-                    <v-btn color="success" class="assign-btn" @click="onAssignMembers">사원 배치</v-btn>
+                    <v-btn color="success" class="assign-btn" disabled>사원 배치 (준비 중)</v-btn>
                 </div>
                 <div class="member-list">
-                    <div v-if="loading" class="d-flex justify-center align-center pa-4">
-                        <v-progress-circular indeterminate color="primary" />
-                    </div>
-                    <div v-else-if="jobMembers.length === 0" class="d-flex justify-center align-center pa-4 text-grey">
-                        배치된 사원이 없습니다
-                    </div>
-                    <div v-else class="member-item" v-for="member in jobMembers" :key="member.id">
-                        <v-checkbox-btn v-model="selectedMembers" :value="member.id" class="mr-2" />
-                        <span class="member-name">{{ member.name }}</span>
-                        <span class="member-dept">{{ member.department?.name || '' }}</span>
+                    <div class="d-flex justify-center align-center pa-4 text-grey">
+                        사원 배치 기능은 준비 중입니다
                     </div>
                 </div>
             </div>
@@ -45,12 +37,9 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useJobStore } from '@/stores/jobStore';
-import { JobActivateDTO } from '@/dto/orgstructure/jobDTO';
-import { useToast } from 'vue-toastification';
 
-const toast = useToast();
 const props = defineProps({
     item: {
         type: Object,
@@ -61,13 +50,10 @@ const props = defineProps({
 const emit = defineEmits(['update']);
 const jobStore = useJobStore();
 const localItem = ref({ ...props.item });
-const jobMembers = ref([]);
-const selectedMembers = ref([]);
-const loading = ref(false);
 
 const getActiveButtonText = computed(() => {
     if (!localItem.value?.isActive) return '비활성화';
-    return localItem.value.isActive === 'INACTIVE' ? '활성화' : '비활성화';
+    return localItem.value.isActive === 0 ? '활성화' : '비활성화';
 });
 
 watch(() => props.item, (newVal) => {
@@ -76,63 +62,33 @@ watch(() => props.item, (newVal) => {
     }
 }, { immediate: true });
 
-async function loadJobMembers(jobId) {
-    loading.value = true;
-    try {
-        const response = await jobStore.getJobMembersByJob(jobId);
-        jobMembers.value = response || [];
-        selectedMembers.value = jobMembers.value.map(member => member.id);
-    } catch (error) {
-        console.error('직무별 회원 목록 로딩 실패:', error);
-        jobMembers.value = [];
-    } finally {
-        loading.value = false;
-    }
-}
-
 async function onUpdate() {
     if (!localItem.value?.id) return;
 
     try {
         await jobStore.updateJob(localItem.value.id, localItem.value);
         emit('update', localItem.value);
-        toast.success('직무 정보가 수정되었습니다.');
+        alert('직무 정보가 수정되었습니다.');
     } catch (error) {
         console.error('직무 수정 실패:', error);
-        toast.error(error.message || '직무 수정에 실패했습니다.');
+        alert(error.message || '직무 수정에 실패했습니다.');
     }
 }
 
 async function onToggleActive() {
     if (!localItem.value?.id) return;
 
-    const isCurrentlyActive = localItem.value.isActive === 'ACTIVE';
+    const isCurrentlyActive = localItem.value.isActive === 1;
     const actionText = isCurrentlyActive ? '비활성화' : '활성화';
 
     try {
-        const dto = new JobActivateDTO({
-            id: localItem.value.id,
-            isActive: isCurrentlyActive ? 'INACTIVE' : 'ACTIVE'
-        });
-        await jobStore.patchJobActivate(localItem.value.id, dto);
-        localItem.value.isActive = dto.isActive;
+        await jobStore.patchJobActivate(localItem.value.id);
+        localItem.value.isActive = isCurrentlyActive ? 0 : 1;
         emit('update', localItem.value);
-        toast.success(`직무가 ${actionText}되었습니다.`);
+        alert(`직무가 ${actionText}되었습니다.`);
     } catch (error) {
         console.error(`직무 ${actionText} 실패:`, error);
-        toast.error(error.message || `직무 ${actionText}에 실패했습니다.`);
-    }
-}
-
-async function onAssignMembers() {
-    try {
-        localItem.value.members = selectedMembers.value;
-        await jobStore.updateJob(localItem.value.id, localItem.value);
-        emit('update', localItem.value);
-        toast.success('사원 배치가 완료되었습니다.');
-    } catch (error) {
-        console.error('사원 배치 실패:', error);
-        toast.error(error.message || '사원 배치에 실패했습니다.');
+        alert(error.message || `직무 ${actionText}에 실패했습니다.`);
     }
 }
 
@@ -141,12 +97,6 @@ function onInput() {
         emit('update', { ...localItem.value });
     }
 }
-
-onMounted(() => {
-    if (localItem.value.id) {
-        loadJobMembers(localItem.value.id);
-    }
-});
 </script>
 
 <style scoped>
@@ -198,75 +148,50 @@ onMounted(() => {
 .desc-label {
     font-weight: bold;
     margin-bottom: 16px;
-    font-size: 1.1rem;
 }
 
 .desc-box {
-    background: #fff;
-}
-
-.desc-box :deep(.v-field__input) {
-    min-height: 180px;
-    padding: 16px;
-    font-size: 1.1rem;
-    line-height: 1.5;
-}
-
-.desc-box :deep(.v-field) {
-    background: #fff;
-}
-
-.desc-box :deep(.v-field__outline) {
-    border-color: #bdbdbd;
-}
-
-.desc-box :deep(.v-field--focused .v-field__outline) {
-    border-color: #5b8c4d;
+    width: 100%;
 }
 
 .member-area {
-    width: 320px;
-    min-width: 220px;
+    flex: 1;
+    max-width: 400px;
 }
 
 .member-header {
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 .assign-btn {
-    min-width: 120px;
-    font-size: 1.05rem;
+    width: 100%;
 }
 
 .member-list {
-    border: 2px solid #bdbdbd;
-    border-radius: 8px;
-    background: #fafafa;
-    max-height: 220px;
-    overflow-y: auto;
-    padding: 18px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 16px;
+    min-height: 200px;
 }
 
 .member-item {
     display: flex;
     align-items: center;
-    margin-bottom: 12px;
-    font-size: 1.08rem;
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f5;
 }
 
 .member-item:last-child {
-    margin-bottom: 0;
+    border-bottom: none;
 }
 
 .member-name {
+    flex: 1;
     margin-right: 16px;
-    min-width: 70px;
 }
 
 .member-dept {
-    color: #888;
-    font-size: 1rem;
+    color: #666;
+    font-size: 0.9rem;
 }
 </style>

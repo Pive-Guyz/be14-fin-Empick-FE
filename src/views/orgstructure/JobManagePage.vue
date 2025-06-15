@@ -27,7 +27,7 @@
                 <OrgBoxList v-if="!search" v-model="jobStore.jobs" @update:modelValue="onJobListUpdate">
                     <template #item="{ element }">
                         <OrgAccordionItem :item="element" v-model="element.isOpen">
-                            <OrgAccordionDetail :item="element" @update="onJobUpdate" />
+                            <JobAccordionDetail :item="element" @update="onJobUpdate" />
                         </OrgAccordionItem>
                     </template>
                 </OrgBoxList>
@@ -35,7 +35,7 @@
                 <div v-else>
                     <div v-for="element in filteredItems" :key="element.id">
                         <OrgAccordionItem :item="element" v-model="element.isOpen">
-                            <OrgAccordionDetail :item="element" @update="onJobUpdate" />
+                            <JobAccordionDetail :item="element" @update="onJobUpdate" />
                         </OrgAccordionItem>
                     </div>
                 </div>
@@ -49,7 +49,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useJobStore } from '@/stores/jobStore';
 import OrgBoxList from '@/components/orgstructure/OrgBoxList.vue';
 import OrgAccordionItem from '@/components/orgstructure/OrgAccordionItem.vue';
-import OrgAccordionDetail from '@/components/orgstructure/JobAccordionDetail.vue';
+import JobAccordionDetail from '@/components/orgstructure/JobAccordionDetail.vue';
 import OrgAccordionRegistItem from '@/components/orgstructure/OrgAccordionRegistItem.vue';
 import OrgAccordionRegistDetail from '@/components/orgstructure/OrgAccordionRegistDetail.vue';
 import { useToast } from 'vue-toastification';
@@ -67,7 +67,7 @@ const filteredItems = computed(() => {
 
 onMounted(async () => {
     try {
-        await jobStore.fetchJobList();
+        await jobStore.getJobList();
         // 각 직무 항목에 isOpen 속성 추가
         jobStore.jobs.forEach(job => {
             job.isOpen = false;

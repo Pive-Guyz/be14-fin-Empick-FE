@@ -1,125 +1,83 @@
-export default class JobDTO {
-    constructor(data = {}) {
-        this.id = data.id || null;
-        this.name = data.name || '';
-        this.code = data.code || '';
-        this.isActive = data.isActive || false;
-        this.description = data.description || '';
-        this.roleId = data.roleId || null;
-        this.createdAt = data.createdAt || null;
-        this.updatedAt = data.updatedAt || null;
-        this.roleCode = data.roleCode || '';
-        this.roleName = data.roleName || '';
-        this.memberCount = data.memberCount || 0;
-        this.activeMemberCount = data.activeMemberCount || 0;
+export class JobDTO {
+    constructor(data) {
+        this.id = data?.id || null;
+        this.code = data?.code || '';
+        this.name = data?.name || '';
+        this.description = data?.description || '';
+        this.isActive = data?.isActive || 0;
+        this.createdAt = data?.createdAt || null;
+        this.updatedAt = data?.updatedAt || null;
     }
 
-    // 기본 직무 정보만 포함하는 DTO 생성
-    static createBasicJob(data) {
+    static fromAPI(data) {
+        if (!data) return null;
         return new JobDTO({
             id: data.id,
-            name: data.name,
             code: data.code,
-            isActive: data.isActive,
+            name: data.name,
             description: data.description,
-            roleId: data.roleId,
+            isActive: data.isActive,
             createdAt: data.createdAt,
             updatedAt: data.updatedAt
         });
     }
 
-    // 직무 생성용 DTO 생성
-    static toCreateJob(data) {
-        return {
-            name: data.name,
-            code: data.code,
-            description: data.description,
-            roleId: data.roleId,
-            isActive: data.isActive || true
-        };
-    }
-
-    // 직무 수정용 DTO 생성
-    static toUpdateJob(data) {
-        return {
-            name: data.name,
-            code: data.code,
-            description: data.description,
-            roleId: data.roleId,
-            isActive: data.isActive
-        };
-    }
-
-    // API 응답을 DTO로 변환
-    static fromJSON(data) {
-        return new JobDTO(data);
-    }
-
-    // 권한 정보가 포함된 DTO 생성
-    static createWithRole(data) {
-        return new JobDTO({
-            ...data,
-            roleCode: data.roleCode,
-            roleName: data.roleName
-        });
-    }
-
-    // 사원 수 정보가 포함된 DTO 생성
-    static createWithMemberCount(data) {
-        return new JobDTO({
-            ...data,
-            memberCount: data.memberCount,
-            activeMemberCount: data.activeMemberCount
-        });
-    }
-
-    // 모든 정보가 포함된 DTO 생성
-    static createFullDetails(data) {
-        return new JobDTO({
-            ...data,
-            roleCode: data.roleCode,
-            roleName: data.roleName,
-            memberCount: data.memberCount,
-            activeMemberCount: data.activeMemberCount
-        });
+    static fromAPIList(data) {
+        if (!data) return [];
+        return data.map(item => JobDTO.fromAPI(item));
     }
 
     toJSON() {
         return {
             id: this.id,
-            name: this.name,
             code: this.code,
-            isActive: this.isActive,
+            name: this.name,
             description: this.description,
-            roleId: this.roleId,
+            isActive: this.isActive,
             createdAt: this.createdAt,
-            updatedAt: this.updatedAt,
-            roleCode: this.roleCode,
-            roleName: this.roleName,
-            memberCount: this.memberCount,
-            activeMemberCount: this.activeMemberCount
+            updatedAt: this.updatedAt
         };
     }
+}
 
-    // DTO를 데이터베이스 형식으로 변환
-    toDatabaseFormat() {
+export class JobCreateDTO {
+    constructor(data) {
+        this.code = data?.code || '';
+        this.name = data?.name || '';
+        this.description = data?.description || '';
+        this.isActive = data?.isActive || 1;
+    }
+
+    toJSON() {
         return {
-            id: this.id,
-            name: this.name,
             code: this.code,
-            is_active: this.isActive,
+            name: this.name,
             description: this.description,
-            role_id: this.roleId,
-            created_at: this.createdAt,
-            updated_at: this.updatedAt
+            isActive: this.isActive
+        };
+    }
+}
+
+export class JobUpdateDTO {
+    constructor(data) {
+        this.code = data?.code || '';
+        this.name = data?.name || '';
+        this.description = data?.description || '';
+    }
+
+    toJSON() {
+        return {
+            code: this.code,
+            name: this.name,
+            description: this.description
         };
     }
 }
 
 export class JobActivateDTO {
-    constructor(data = {}) {
-        this.id = data.id || null;
-        this.isActive = data.isActive || 'INACTIVE';
+    constructor(data) {
+        this.id = data?.id || null;
+        this.isActive = data?.isActive || 0;
     }
 
     toJSON() {
