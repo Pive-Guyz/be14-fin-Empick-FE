@@ -9,7 +9,7 @@
                 </v-btn>
             </div>
         </div>
-        <div v-show="modelValue" class="regist-content">
+        <div v-if="modelValue" class="regist-content">
             <div class="regist-flex">
                 <slot />
             </div>
