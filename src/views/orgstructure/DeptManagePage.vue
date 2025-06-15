@@ -24,18 +24,18 @@
                 </OrgAccordionRegistItem>
 
                 <!-- 부서 목록 -->
-                <OrgBoxList v-if="!search" v-model="items">
+                <OrgBoxList v-if="!search" v-model="deptStore.depts" @update:modelValue="onDeptListUpdate">
                     <template #item="{ element }">
-                        <OrgAccordionItem :item="element">
-                            <OrgAccordionDetail :item="element" />
+                        <OrgAccordionItem :item="element" v-model="element.isOpen">
+                            <OrgAccordionDetail :item="element" @update="onDeptUpdate" />
                         </OrgAccordionItem>
                     </template>
                 </OrgBoxList>
 
                 <div v-else>
                     <div v-for="element in filteredItems" :key="element.id">
-                        <OrgAccordionItem :item="element">
-                            <OrgAccordionDetail :item="element" />
+                        <OrgAccordionItem :item="element" v-model="element.isOpen">
+                            <OrgAccordionDetail :item="element" @update="onDeptUpdate" />
                         </OrgAccordionItem>
                     </div>
                 </div>
@@ -46,69 +46,79 @@
 
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useDeptStore } from '@/stores/deptStore';
 import OrgBoxList from '@/components/orgstructure/OrgBoxList.vue';
 import OrgAccordionItem from '@/components/orgstructure/OrgAccordionItem.vue';
 import OrgAccordionDetail from '@/components/orgstructure/OrgAccordionDetail.vue';
 import OrgAccordionRegistItem from '@/components/orgstructure/OrgAccordionRegistItem.vue';
 import OrgAccordionRegistDetail from '@/components/orgstructure/OrgAccordionRegistDetail.vue';
 
-const items = ref([
-    { id: 1, name: '개발' },
-    { id: 2, name: '인사' },
-    { id: 3, name: '회계' },
-    { id: 4, name: '법무' },
-    { id: 5, name: '영업' },
-]);
-
+const deptStore = useDeptStore();
 const search = ref('');
-const filteredItems = computed({
-    get() {
-        if (!search.value) return items.value;
-        return items.value.filter(item => item.name.includes(search.value));
-    },
-    set(newList) {
-        // 드래그 시 순서 반영
-        if (!search.value) {
-            items.value = newList;
-        }
-    }
-});
-
-// 신규 등록 상태
 const registMode = ref(false);
 const registDept = ref({ id: null, name: '' });
 
+const filteredItems = computed(() => {
+    if (!search.value) return deptStore.depts;
+    return deptStore.depts.filter(item => item.name.includes(search.value));
+});
+
+onMounted(async () => {
+    try {
+        await deptStore.getDeptList();
+        // 각 부서 항목에 isOpen 속성 추가
+        deptStore.depts.forEach(dept => {
+            dept.isOpen = false;
+        });
+    } catch (error) {
+        console.error('부서 목록 로딩 실패:', error);
+    }
+});
+
 function onAdd() {
-    registDept.value = { id: Date.now(), name: '' };
+    registDept.value = { id: null, name: '' };
     registMode.value = true;
 }
 
-function onRegistSave(newDept) {
-    items.value.unshift({ ...newDept });
-    registMode.value = false;
+async function onRegistSave(newDept) {
+    try {
+        await deptStore.postDeptCreate(newDept);
+        await deptStore.getDeptList();
+        // 새로 추가된 부서에 isOpen 속성 추가
+        deptStore.depts.forEach(dept => {
+            if (!('isOpen' in dept)) {
+                dept.isOpen = false;
+            }
+        });
+        registMode.value = false;
+    } catch (error) {
+        console.error('부서 생성 실패:', error);
+    }
 }
 
 function onRegistCancel() {
     registMode.value = false;
 }
 
-const openedIndex = ref(null);
-function toggleAccordion(idx) {
-    openedIndex.value = openedIndex.value === idx ? null : idx;
+async function onDeptUpdate(updatedDept) {
+    try {
+        await deptStore.updateDept(updatedDept.id, updatedDept);
+        await deptStore.getDeptList();
+    } catch (error) {
+        console.error('부서 수정 실패:', error);
+    }
+}
+
+function onDeptListUpdate(newList) {
+    // 드래그 앤 드롭으로 순서가 변경된 경우 처리
+    deptStore.depts = newList;
 }
 
 function onSearch() {
-    // 검색 로직 구현
+    // 검색은 computed 속성에서 자동으로 처리됨
 }
 
-const sampleMembers = [
-    { name: '서민중', dept: '인사' },
-    { name: '곽우석', dept: '영업' },
-    { name: '김석희', dept: '개발' },
-    { name: '최혜민', dept: '회계' },
-    { name: '이상모', dept: '개발' },
-];
 </script>
 
 <style scoped>

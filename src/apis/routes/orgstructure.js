@@ -22,4 +22,7 @@ export const DeptAPI = {
 
     // 부서 생성
     CREATE: '/api/v1/departments',
+
+    // 부서 수정
+    UPDATE: (id) => `/api/v1/departments/${id}`,
 };
