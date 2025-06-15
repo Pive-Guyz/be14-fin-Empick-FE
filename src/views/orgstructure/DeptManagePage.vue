@@ -1,17 +1,39 @@
 <template>
-    <v-container class="pa-0" fluid>
-        <v-row justify="center">
-            <v-col cols="12" md="10" lg="8" xl="7">
-                <h2 class="font-weight-bold mb-8 mt-8" style="font-size:2rem;">부서 관리</h2>
+    <v-container fluid class="pa-8">
+        <v-row>
+            <v-col cols="12">
+                <!-- 타이틀 -->
+                <h2 class="text-h5 font-weight-bold mb-4">부서 관리</h2>
+
+                <!-- 검색창 + 버튼 (한 줄로 꽉 차게) -->
+                <div class="d-flex justify-space-between align-center mb-6" style="gap: 16px;">
+                    <v-text-field v-model="search" placeholder="부서 검색" hide-details dense solo
+                        append-inner-icon="mdi-magnify" class="search-box" style="flex: 1;" @keyup.enter="onSearch" />
+                    <v-btn color="success" class="add-button" height="40" rounded @click="onAdd">
+                        + 추가
+                    </v-btn>
+                </div>
+            </v-col>
+        </v-row>
+
+        <v-row>
+            <v-col cols="12">
+                <!-- 신규 등록 아코디언 -->
+                <OrgAccordionRegistItem v-if="registMode" v-model="registMode">
+                    <OrgAccordionRegistDetail v-model="registDept" @save="onRegistSave" @cancel="onRegistCancel" />
+                </OrgAccordionRegistItem>
+
+                <!-- 부서 목록 -->
                 <OrgBoxList v-if="!search" v-model="items">
-                    <template #item="{ element, index }">
+                    <template #item="{ element }">
                         <OrgAccordionItem :item="element">
                             <OrgAccordionDetail :item="element" />
                         </OrgAccordionItem>
                     </template>
                 </OrgBoxList>
+
                 <div v-else>
-                    <div v-for="(element, index) in filteredItems" :key="element.id">
+                    <div v-for="element in filteredItems" :key="element.id">
                         <OrgAccordionItem :item="element">
                             <OrgAccordionDetail :item="element" />
                         </OrgAccordionItem>
@@ -22,11 +44,14 @@
     </v-container>
 </template>
 
+
 <script setup>
 import { ref, computed } from 'vue';
 import OrgBoxList from '@/components/orgstructure/OrgBoxList.vue';
 import OrgAccordionItem from '@/components/orgstructure/OrgAccordionItem.vue';
 import OrgAccordionDetail from '@/components/orgstructure/OrgAccordionDetail.vue';
+import OrgAccordionRegistItem from '@/components/orgstructure/OrgAccordionRegistItem.vue';
+import OrgAccordionRegistDetail from '@/components/orgstructure/OrgAccordionRegistDetail.vue';
 
 const items = ref([
     { id: 1, name: '개발' },
@@ -50,27 +75,31 @@ const filteredItems = computed({
     }
 });
 
+// 신규 등록 상태
+const registMode = ref(false);
+const registDept = ref({ id: null, name: '' });
+
+function onAdd() {
+    registDept.value = { id: Date.now(), name: '' };
+    registMode.value = true;
+}
+
+function onRegistSave(newDept) {
+    items.value.unshift({ ...newDept });
+    registMode.value = false;
+}
+
+function onRegistCancel() {
+    registMode.value = false;
+}
+
 const openedIndex = ref(null);
 function toggleAccordion(idx) {
     openedIndex.value = openedIndex.value === idx ? null : idx;
 }
 
 function onSearch() {
-    // v-model로 자동 반영
-}
-
-function onAddDept() {
-    const name = prompt('새 부서명을 입력하세요');
-    if (!name || !name.trim()) {
-        alert('부서명을 입력하세요.');
-        return;
-    }
-    if (items.value.some(item => item.name === name.trim())) {
-        alert('이미 존재하는 부서명입니다.');
-        return;
-    }
-    items.value.push({ id: Date.now(), name: name.trim() });
-    search.value = '';
+    // 검색 로직 구현
 }
 
 const sampleMembers = [
@@ -246,5 +275,16 @@ const sampleMembers = [
 .member-dept {
     color: #888;
     font-size: 1rem;
+}
+
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-bottom: 24px;
+}
+
+.ml-4 {
+    margin-left: 16px;
 }
 </style>
