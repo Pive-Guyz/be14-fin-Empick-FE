@@ -85,7 +85,7 @@ export class DeptUpdateDTO {
 export class DeptActivateDTO {
     constructor({
         id = null,
-        isActive = 1,
+        isActive = 'ACTIVE',
     } = {}) {
         this.id = id;
         this.isActive = isActive;

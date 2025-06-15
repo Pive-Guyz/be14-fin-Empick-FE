@@ -51,9 +51,13 @@ export const petchCompleteDeptChangeHistoryService = async (historyId) => {
     }
 };
 
-export const petchDeptActivateService = async (id) => {
+export const petchDeptActivateService = async (id, dto) => {
     try {
-        const response = await api.patch(DeptAPI.ACTIVATE(id));
+        const response = await api.patch(DeptAPI.ACTIVATE(id), null, {
+            params: {
+                isActive: dto.isActive === 0 ? 'INACTIVE' : 'ACTIVE'
+            }
+        });
         return response.data;
     } catch (error) {
         console.error('부서 활성화 실패:', error);

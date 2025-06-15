@@ -8,8 +8,11 @@
                     class="name-input" @input="onInput" />
             </div>
             <div class="header-actions">
-                <v-btn variant="outlined" class="mr-2" @click="onUpdate">수정</v-btn>
-                <v-btn variant="outlined" color="error" @click="onDeactivate">비활성화</v-btn>
+                <v-btn variant="outlined" class="mr-2" @click="onUpdate" :disabled="!localItem?.id">수정</v-btn>
+                <v-btn variant="outlined" :color="localItem?.isActive === 'INACTIVE' ? 'success' : 'error'"
+                    @click="onToggleActive" :disabled="!localItem?.id">
+                    {{ getActiveButtonText }}
+                </v-btn>
             </div>
         </div>
         <div class="accordion-content">
@@ -42,9 +45,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { useDeptStore } from '@/stores/deptStore';
+import { DeptActivateDTO } from '@/dto/orgstructure/deptDTO';
+import { useToast } from 'vue-toastification';
 
+const toast = useToast();
 const props = defineProps({
     item: {
         type: Object,
@@ -53,19 +59,22 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update']);
-
 const deptStore = useDeptStore();
-const localItem = reactive({ ...props.item });
+const localItem = ref({ ...props.item });
 const deptMembers = ref([]);
 const selectedMembers = ref([]);
 const loading = ref(false);
 
-watch(() => props.item, (val) => {
-    Object.assign(localItem, val);
-    if (val.id) {
-        loadDeptMembers(val.id);
-    }
+const getActiveButtonText = computed(() => {
+    if (!localItem.value?.isActive) return '비활성화';
+    return localItem.value.isActive === 'INACTIVE' ? '활성화' : '비활성화';
 });
+
+watch(() => props.item, (newVal) => {
+    if (newVal) {
+        localItem.value = { ...newVal };
+    }
+}, { immediate: true });
 
 async function loadDeptMembers(deptId) {
     loading.value = true;
@@ -82,36 +91,60 @@ async function loadDeptMembers(deptId) {
 }
 
 async function onUpdate() {
+    if (!localItem.value?.id) return;
+
     try {
-        await deptStore.updateDept(localItem.id, localItem);
-        emit('update', localItem);
+        await deptStore.updateDept(localItem.value.id, localItem.value);
+        emit('update', localItem.value);
+        toast.success('부서 정보가 수정되었습니다.');
     } catch (error) {
         console.error('부서 수정 실패:', error);
+        toast.error(error.message || '부서 수정에 실패했습니다.');
     }
 }
 
-async function onDeactivate() {
+async function onToggleActive() {
+    if (!localItem.value?.id) return;
+
+    const isCurrentlyActive = localItem.value.isActive === 'ACTIVE';
+    const actionText = isCurrentlyActive ? '비활성화' : '활성화';
+
     try {
-        await deptStore.petchDeptActivate(localItem.id);
-        emit('update', localItem);
+        const dto = new DeptActivateDTO({
+            id: localItem.value.id,
+            isActive: isCurrentlyActive ? 'INACTIVE' : 'ACTIVE'
+        });
+        await deptStore.petchDeptActivate(localItem.value.id, dto);
+        localItem.value.isActive = dto.isActive;
+        emit('update', localItem.value);
+        toast.success(`부서가 ${actionText}되었습니다.`);
     } catch (error) {
-        console.error('부서 비활성화 실패:', error);
+        console.error(`부서 ${actionText} 실패:`, error);
+        toast.error(error.message || `부서 ${actionText}에 실패했습니다.`);
     }
 }
 
 async function onAssignMembers() {
     try {
-        localItem.members = selectedMembers.value;
-        await deptStore.updateDept(localItem.id, localItem);
-        emit('update', localItem);
+        localItem.value.members = selectedMembers.value;
+        await deptStore.updateDept(localItem.value.id, localItem.value);
+        emit('update', localItem.value);
+        toast.success('사원 배치가 완료되었습니다.');
     } catch (error) {
         console.error('사원 배치 실패:', error);
+        toast.error(error.message || '사원 배치에 실패했습니다.');
+    }
+}
+
+function onInput() {
+    if (localItem.value) {
+        emit('update', { ...localItem.value });
     }
 }
 
 onMounted(() => {
-    if (localItem.id) {
-        loadDeptMembers(localItem.id);
+    if (localItem.value.id) {
+        loadDeptMembers(localItem.value.id);
     }
 });
 </script>
@@ -148,6 +181,8 @@ onMounted(() => {
 
 .header-actions .v-btn {
     min-width: 100px;
+    font-size: 0.9rem;
+    text-transform: none;
 }
 
 .accordion-content {
