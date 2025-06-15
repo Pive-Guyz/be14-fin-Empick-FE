@@ -9,7 +9,7 @@
             </div>
             <div class="header-actions">
                 <v-btn variant="outlined" class="mr-2" @click="onUpdate">수정</v-btn>
-                <v-btn variant="outlined" @click="onDeactivate">비활성화</v-btn>
+                <v-btn variant="outlined" color="error" @click="onDeactivate">비활성화</v-btn>
             </div>
         </div>
         <div class="accordion-content">
@@ -122,6 +122,7 @@ onMounted(() => {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 32px;
+    gap: 24px;
 }
 
 .input-group {
@@ -131,17 +132,22 @@ onMounted(() => {
 }
 
 .code-input {
-    width: 200px;
+    width: 180px;
 }
 
 .name-input {
     flex: 1;
+    max-width: 400px;
 }
 
 .header-actions {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.header-actions .v-btn {
+    min-width: 100px;
 }
 
 .accordion-content {
