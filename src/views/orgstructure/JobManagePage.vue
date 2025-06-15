@@ -54,8 +54,8 @@ import JobRegistItem from '@/components/orgstructure/job/JobRegistItem.vue';
 import JobRegistDetail from '@/components/orgstructure/job/JobRegistDetail.vue';
 import { useToast } from 'vue-toastification';
 
-const toast = useToast();
 const jobStore = useJobStore();
+const toast = useToast();
 const search = ref('');
 const registMode = ref(false);
 const registJob = ref({
@@ -80,7 +80,6 @@ onMounted(async () => {
         });
     } catch (error) {
         console.error('직무 목록 로딩 실패:', error);
-        toast.error('직무 목록을 불러오는데 실패했습니다.');
     }
 });
 
@@ -112,7 +111,7 @@ async function onRegistSave(newJob) {
             name: newJob.name.trim(),
             code: newJob.code.trim(),
             description: newJob.description?.trim() || '',
-            isActive: 1  // 활성화 상태를 1로 설정
+            isActive: 1
         });
 
         // 목록 새로고침
@@ -127,7 +126,13 @@ async function onRegistSave(newJob) {
 
         // 등록 모드 종료
         registMode.value = false;
-        registJob.value = { id: null, name: '', code: '', description: '', isActive: 1 };
+        registJob.value = {
+            id: null,
+            name: '',
+            code: '',
+            description: '',
+            isActive: 1
+        };
         toast.success('직무가 생성되었습니다.');
     } catch (error) {
         console.error('직무 생성 실패:', error);
@@ -142,7 +147,12 @@ function onRegistCancel() {
 async function onJobUpdate(updatedJob) {
     try {
         await jobStore.putJobUpdate(updatedJob.id, updatedJob);
-        await jobStore.getJobList();
+        const index = jobStore.jobs.findIndex(job => job.id === updatedJob.id);
+        if (index !== -1) {
+            const isOpen = jobStore.jobs[index].isOpen;
+            Object.assign(jobStore.jobs[index], updatedJob);
+            jobStore.jobs[index].isOpen = isOpen;
+        }
         toast.success('직무 정보가 수정되었습니다.');
     } catch (error) {
         console.error('직무 수정 실패:', error);
@@ -166,17 +176,51 @@ function onSearch() {
     background: #fff;
 }
 
-.search-box {
+.draggable-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.drag-handle-box {
+    display: flex;
+    align-items: center;
+    margin-right: 16px;
+    height: 100%;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: #222;
+}
+
+.search-input {
     font-size: 1.2rem;
     height: 56px;
 }
 
-.add-button {
+.v-btn {
     font-size: 1.2rem;
     padding: 12px 36px;
     border-radius: 6px;
     min-width: 120px;
     min-height: 48px;
     box-shadow: 0 2px 8px rgba(91, 140, 77, 0.08);
+}
+
+.job-item {
+    flex: 1;
+    border: 2px solid #bdbdbd;
+    border-radius: 12px 12px 12px 12px;
+    overflow: hidden;
+    padding: 16px 32px;
+    font-size: 1.15rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    cursor: pointer;
+    min-height: 56px;
 }
 </style>

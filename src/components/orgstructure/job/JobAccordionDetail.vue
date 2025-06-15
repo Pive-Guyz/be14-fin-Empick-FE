@@ -3,14 +3,14 @@
         <div class="accordion-header">
             <div class="input-group">
                 <v-text-field v-model="localItem.code" label="직무 코드" placeholder="직무 코드를 입력하세요" dense outlined
-                    hide-details class="code-input" />
+                    hide-details class="code-input" @input="onInput" />
                 <v-text-field v-model="localItem.name" label="직무명" placeholder="직무명을 입력하세요" dense outlined hide-details
-                    class="name-input" />
+                    class="name-input" @input="onInput" />
             </div>
             <div class="header-actions">
-                <v-btn variant="outlined" class="mr-2" @click.stop="onUpdate" :disabled="!localItem?.id">수정</v-btn>
-                <v-btn variant="outlined" :color="localItem?.isActive === 0 ? 'success' : 'error'"
-                    @click.stop="onToggleActive" :disabled="!localItem?.id">
+                <v-btn variant="outlined" class="mr-2" @click="onUpdate" :disabled="!localItem?.id">수정</v-btn>
+                <v-btn variant="outlined" :color="localItem?.isActive === 'INACTIVE' ? 'success' : 'error'"
+                    @click="onToggleActive" :disabled="!localItem?.id">
                     {{ getActiveButtonText }}
                 </v-btn>
             </div>
@@ -45,12 +45,12 @@ const localItem = ref({ ...props.item });
 
 const getActiveButtonText = computed(() => {
     if (!localItem.value?.isActive) return '비활성화';
-    return localItem.value.isActive === 0 ? '활성화' : '비활성화';
+    return localItem.value.isActive === 'INACTIVE' ? '활성화' : '비활성화';
 });
 
 watch(() => props.item, (newVal) => {
     if (newVal) {
-        localItem.value = { ...newVal };
+        localItem.value = { ...localItem.value, ...newVal };
     }
 }, { immediate: true });
 
@@ -70,7 +70,7 @@ async function onUpdate() {
 async function onToggleActive() {
     if (!localItem.value?.id) return;
 
-    const isCurrentlyActive = localItem.value.isActive === 1;
+    const isCurrentlyActive = localItem.value.isActive === 'ACTIVE';
     const actionText = isCurrentlyActive ? '비활성화' : '활성화';
 
     try {
@@ -79,12 +79,18 @@ async function onToggleActive() {
         } else {
             await jobStore.patchJobActivate(localItem.value.id);
         }
-        localItem.value.isActive = isCurrentlyActive ? 0 : 1;
+        localItem.value.isActive = isCurrentlyActive ? 'INACTIVE' : 'ACTIVE';
         emit('update', localItem.value);
         toast.success(`직무가 ${actionText}되었습니다.`);
     } catch (error) {
         console.error(`직무 ${actionText} 실패:`, error);
         toast.error(error.message || `직무 ${actionText}에 실패했습니다.`);
+    }
+}
+
+function onInput() {
+    if (localItem.value) {
+        emit('update', { ...localItem.value });
     }
 }
 </script>
