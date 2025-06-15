@@ -30,5 +30,13 @@ export const orgstructureRoutes = [
         meta: {
             requiresAuth: true
         }
+    },
+    {
+        path: '/orgstructure/rank-manage',
+        name: 'RankManagePage',
+        component: () => import('@/views/orgstructure/RankManagePage.vue'),
+        meta: {
+            requiresAuth: true
+        }
     }
 ]; 

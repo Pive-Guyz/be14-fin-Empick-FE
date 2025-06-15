@@ -8,6 +8,7 @@ import { RecruitmentAPI } from './recruitment';
 import { ApplicantAPI } from './applicant';
 import { DeptAPI } from './orgstructure';
 import { JobAPI } from './job';
+import { RankAPI } from './rank';
 
 export const API = {
     AUTH: AuthAPI,
@@ -19,5 +20,6 @@ export const API = {
     RECRUITMENT: RecruitmentAPI,
     APPLICANT: ApplicantAPI,
     DEPT: DeptAPI,
-    JOB: JobAPI
+    JOB: JobAPI,
+    RANK: RankAPI
 };
