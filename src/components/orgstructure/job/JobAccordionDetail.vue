@@ -3,14 +3,14 @@
         <div class="accordion-header">
             <div class="input-group">
                 <v-text-field v-model="localItem.code" label="직무 코드" placeholder="직무 코드를 입력하세요" dense outlined
-                    hide-details class="code-input" @input="onInput" />
+                    hide-details class="code-input" />
                 <v-text-field v-model="localItem.name" label="직무명" placeholder="직무명을 입력하세요" dense outlined hide-details
-                    class="name-input" @input="onInput" />
+                    class="name-input" />
             </div>
             <div class="header-actions">
-                <v-btn variant="outlined" class="mr-2" @click="onUpdate" :disabled="!localItem?.id">수정</v-btn>
+                <v-btn variant="outlined" class="mr-2" @click.stop="onUpdate" :disabled="!localItem?.id">수정</v-btn>
                 <v-btn variant="outlined" :color="localItem?.isActive === 0 ? 'success' : 'error'"
-                    @click="onToggleActive" :disabled="!localItem?.id">
+                    @click.stop="onToggleActive" :disabled="!localItem?.id">
                     {{ getActiveButtonText }}
                 </v-btn>
             </div>
@@ -21,16 +21,6 @@
                 <v-textarea v-model="localItem.description" placeholder="직무 설명을 입력하세요" variant="outlined" auto-grow
                     rows="5" hide-details class="desc-box" />
             </div>
-            <div class="member-area">
-                <div class="member-header">
-                    <v-btn color="success" class="assign-btn" disabled>사원 배치 (준비 중)</v-btn>
-                </div>
-                <div class="member-list">
-                    <div class="d-flex justify-center align-center pa-4 text-grey">
-                        사원 배치 기능은 준비 중입니다
-                    </div>
-                </div>
-            </div>
         </div>
         <slot />
     </div>
@@ -39,7 +29,9 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import { useJobStore } from '@/stores/jobStore';
+import { useToast } from 'vue-toastification';
 
+const toast = useToast();
 const props = defineProps({
     item: {
         type: Object,
@@ -66,12 +58,12 @@ async function onUpdate() {
     if (!localItem.value?.id) return;
 
     try {
-        await jobStore.updateJob(localItem.value.id, localItem.value);
+        await jobStore.putJobUpdate(localItem.value.id, localItem.value);
         emit('update', localItem.value);
-        alert('직무 정보가 수정되었습니다.');
+        toast.success('직무 정보가 수정되었습니다.');
     } catch (error) {
         console.error('직무 수정 실패:', error);
-        alert(error.message || '직무 수정에 실패했습니다.');
+        toast.error(error.message || '직무 수정에 실패했습니다.');
     }
 }
 
@@ -82,19 +74,17 @@ async function onToggleActive() {
     const actionText = isCurrentlyActive ? '비활성화' : '활성화';
 
     try {
-        await jobStore.patchJobActivate(localItem.value.id);
+        if (isCurrentlyActive) {
+            await jobStore.patchJobDeactivate(localItem.value.id);
+        } else {
+            await jobStore.patchJobActivate(localItem.value.id);
+        }
         localItem.value.isActive = isCurrentlyActive ? 0 : 1;
         emit('update', localItem.value);
-        alert(`직무가 ${actionText}되었습니다.`);
+        toast.success(`직무가 ${actionText}되었습니다.`);
     } catch (error) {
         console.error(`직무 ${actionText} 실패:`, error);
-        alert(error.message || `직무 ${actionText}에 실패했습니다.`);
-    }
-}
-
-function onInput() {
-    if (localItem.value) {
-        emit('update', { ...localItem.value });
+        toast.error(error.message || `직무 ${actionText}에 실패했습니다.`);
     }
 }
 </script>
@@ -148,50 +138,29 @@ function onInput() {
 .desc-label {
     font-weight: bold;
     margin-bottom: 16px;
+    font-size: 1.1rem;
 }
 
 .desc-box {
-    width: 100%;
+    background: #fff;
 }
 
-.member-area {
-    flex: 1;
-    max-width: 400px;
-}
-
-.member-header {
-    margin-bottom: 16px;
-}
-
-.assign-btn {
-    width: 100%;
-}
-
-.member-list {
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
+.desc-box :deep(.v-field__input) {
+    min-height: 180px;
     padding: 16px;
-    min-height: 200px;
+    font-size: 1.1rem;
+    line-height: 1.5;
 }
 
-.member-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #f5f5f5;
+.desc-box :deep(.v-field) {
+    background: #fff;
 }
 
-.member-item:last-child {
-    border-bottom: none;
+.desc-box :deep(.v-field__outline) {
+    border-color: #bdbdbd;
 }
 
-.member-name {
-    flex: 1;
-    margin-right: 16px;
-}
-
-.member-dept {
-    color: #666;
-    font-size: 0.9rem;
+.desc-box :deep(.v-field--focused .v-field__outline) {
+    border-color: #5b8c4d;
 }
 </style>

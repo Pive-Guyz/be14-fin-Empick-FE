@@ -19,9 +19,9 @@
         <v-row>
             <v-col cols="12">
                 <!-- 신규 등록 아코디언 -->
-                <OrgAccordionRegistItem v-if="registMode" v-model="registMode">
-                    <OrgAccordionRegistDetail v-model="registJob" @save="onRegistSave" @cancel="onRegistCancel" />
-                </OrgAccordionRegistItem>
+                <JobRegistItem v-if="registMode" v-model="registMode">
+                    <JobRegistDetail v-model="registJob" @save="onRegistSave" @cancel="onRegistCancel" />
+                </JobRegistItem>
 
                 <!-- 직무 목록 -->
                 <OrgBoxList v-if="!search" v-model="jobStore.jobs" @update:modelValue="onJobListUpdate">
@@ -49,14 +49,22 @@ import { ref, computed, onMounted } from 'vue';
 import { useJobStore } from '@/stores/jobStore';
 import OrgBoxList from '@/components/orgstructure/OrgBoxList.vue';
 import OrgAccordionItem from '@/components/orgstructure/OrgAccordionItem.vue';
-import JobAccordionDetail from '@/components/orgstructure/JobAccordionDetail.vue';
-import OrgAccordionRegistItem from '@/components/orgstructure/OrgAccordionRegistItem.vue';
-import OrgAccordionRegistDetail from '@/components/orgstructure/OrgAccordionRegistDetail.vue';
+import JobAccordionDetail from '@/components/orgstructure/job/JobAccordionDetail.vue';
+import JobRegistItem from '@/components/orgstructure/job/JobRegistItem.vue';
+import JobRegistDetail from '@/components/orgstructure/job/JobRegistDetail.vue';
+import { useToast } from 'vue-toastification';
 
+const toast = useToast();
 const jobStore = useJobStore();
 const search = ref('');
 const registMode = ref(false);
-const registJob = ref({ id: null, name: '', code: '' });
+const registJob = ref({
+    id: null,
+    name: '',
+    code: '',
+    description: '',
+    isActive: 1
+});
 
 const filteredItems = computed(() => {
     if (!search.value) return jobStore.jobs;
@@ -72,11 +80,18 @@ onMounted(async () => {
         });
     } catch (error) {
         console.error('직무 목록 로딩 실패:', error);
+        toast.error('직무 목록을 불러오는데 실패했습니다.');
     }
 });
 
 function onAdd() {
-    registJob.value = { id: null, name: '', code: '' };
+    registJob.value = {
+        id: null,
+        name: '',
+        code: '',
+        description: '',
+        isActive: 1
+    };
     registMode.value = true;
 }
 
@@ -84,11 +99,11 @@ async function onRegistSave(newJob) {
     try {
         // 필수 필드 검증
         if (!newJob.name?.trim()) {
-            alert('직무명을 입력해주세요.');
+            toast.error('직무명을 입력해주세요.');
             return;
         }
         if (!newJob.code?.trim()) {
-            alert('직무 코드를 입력해주세요.');
+            toast.error('직무 코드를 입력해주세요.');
             return;
         }
 
@@ -112,10 +127,11 @@ async function onRegistSave(newJob) {
 
         // 등록 모드 종료
         registMode.value = false;
-        registJob.value = { id: null, name: '', code: '' };
+        registJob.value = { id: null, name: '', code: '', description: '', isActive: 1 };
+        toast.success('직무가 생성되었습니다.');
     } catch (error) {
         console.error('직무 생성 실패:', error);
-        alert(error.message || '직무 생성에 실패했습니다.');
+        toast.error(error.message || '직무 생성에 실패했습니다.');
     }
 }
 
@@ -127,8 +143,10 @@ async function onJobUpdate(updatedJob) {
     try {
         await jobStore.putJobUpdate(updatedJob.id, updatedJob);
         await jobStore.getJobList();
+        toast.success('직무 정보가 수정되었습니다.');
     } catch (error) {
         console.error('직무 수정 실패:', error);
+        toast.error(error.message || '직무 수정에 실패했습니다.');
     }
 }
 

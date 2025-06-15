@@ -59,17 +59,34 @@ export class JobCreateDTO {
 }
 
 export class JobUpdateDTO {
-    constructor(data) {
-        this.code = data?.code || '';
-        this.name = data?.name || '';
-        this.description = data?.description || '';
+    constructor({
+        code = '',
+        name = '',
+        description = '',
+        isActive = 1
+    } = {}) {
+        this.code = code;
+        this.name = name;
+        this.description = description;
+        this.isActive = isActive;
+    }
+
+    static fromAPI(apiData) {
+        if (!apiData) return null;
+        return new JobUpdateDTO({
+            code: apiData.code,
+            name: apiData.name,
+            description: apiData.description,
+            isActive: apiData.isActive
+        });
     }
 
     toJSON() {
         return {
             code: this.code,
             name: this.name,
-            description: this.description
+            description: this.description,
+            isActive: this.isActive
         };
     }
 }

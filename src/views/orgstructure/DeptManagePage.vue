@@ -19,9 +19,9 @@
         <v-row>
             <v-col cols="12">
                 <!-- 신규 등록 아코디언 -->
-                <OrgAccordionRegistItem v-if="registMode" v-model="registMode">
+                <DeptRegistItem v-if="registMode" v-model="registMode">
                     <OrgAccordionRegistDetail v-model="registDept" @save="onRegistSave" @cancel="onRegistCancel" />
-                </OrgAccordionRegistItem>
+                </DeptRegistItem>
 
                 <!-- 부서 목록 -->
                 <OrgBoxList v-if="!search" v-model="deptStore.depts" @update:modelValue="onDeptListUpdate">
@@ -50,9 +50,9 @@ import { ref, computed, onMounted } from 'vue';
 import { useDeptStore } from '@/stores/deptStore';
 import OrgBoxList from '@/components/orgstructure/OrgBoxList.vue';
 import OrgAccordionItem from '@/components/orgstructure/OrgAccordionItem.vue';
-import DeptAccordionDetail from '@/components/orgstructure/DeptAccordionDetail.vue';
-import OrgAccordionRegistItem from '@/components/orgstructure/OrgAccordionRegistItem.vue';
-import OrgAccordionRegistDetail from '@/components/orgstructure/OrgAccordionRegistDetail.vue';
+import DeptAccordionDetail from '@/components/orgstructure/dept/DeptAccordionDetail.vue';
+import DeptRegistItem from '@/components/orgstructure/dept/DeptRegistItem.vue';
+import OrgAccordionRegistDetail from '@/components/orgstructure/dept/DeptRegistDetail.vue';
 
 const deptStore = useDeptStore();
 const search = ref('');

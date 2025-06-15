@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { jobService } from '@/services/orgstructure/jobService';
+import { jobService } from '@/services/jobService';
 import { JobDTO, JobCreateDTO, JobUpdateDTO, JobActivateDTO } from '@/dto/orgstructure/jobDTO';
 
 export const useJobStore = defineStore('job', {
@@ -61,26 +61,20 @@ export const useJobStore = defineStore('job', {
             }
         },
 
-        async putJobUpdate(jobId, jobData) {
-            this.loading = true;
-            this.error = null;
+        async putJobUpdate(id, jobData) {
             try {
                 const updateDTO = new JobUpdateDTO(jobData);
-                const response = await jobService.updateJob(jobId, updateDTO.toJSON());
+                const response = await jobService.updateJob(id, updateDTO);
                 if (response?.data) {
                     const updatedJob = JobDTO.fromAPI(response.data);
-                    const index = this.jobs.findIndex(job => job.id === jobId);
+                    const index = this.jobs.findIndex(job => job.id === id);
                     if (index !== -1) {
                         this.jobs[index] = updatedJob;
-                        this.filteredJobs = [...this.jobs];
                     }
                 }
-                return response?.data;
             } catch (error) {
-                this.error = error.message || '직무 수정에 실패했습니다.';
-                throw error;
-            } finally {
-                this.loading = false;
+                console.error('직무 수정 실패:', error);
+                throw new Error(error.message || '직무 수정에 실패했습니다.');
             }
         },
 
