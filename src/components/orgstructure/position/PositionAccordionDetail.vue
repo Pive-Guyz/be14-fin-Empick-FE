@@ -2,9 +2,9 @@
     <div>
         <div class="accordion-header">
             <div class="input-group">
-                <v-text-field v-model="localItem.code" label="부서 코드" placeholder="부서 코드를 입력하세요" dense outlined
+                <v-text-field v-model="localItem.code" label="직책 코드" placeholder="직책 코드를 입력하세요" dense outlined
                     hide-details class="code-input" @input="onInput" />
-                <v-text-field v-model="localItem.name" label="부서명" placeholder="부서명을 입력하세요" dense outlined hide-details
+                <v-text-field v-model="localItem.name" label="직책명" placeholder="직책명을 입력하세요" dense outlined hide-details
                     class="name-input" @input="onInput" />
             </div>
             <div class="header-actions">
@@ -17,8 +17,8 @@
         </div>
         <div class="accordion-content">
             <div class="desc-area">
-                <div class="desc-label">부서 설명</div>
-                <v-textarea v-model="localItem.description" placeholder="부서 설명을 입력하세요" variant="outlined" auto-grow
+                <div class="desc-label">직책 설명</div>
+                <v-textarea v-model="localItem.description" placeholder="직책 설명을 입력하세요" variant="outlined" auto-grow
                     rows="5" hide-details class="desc-box" />
             </div>
             <div class="member-area">
@@ -29,10 +29,11 @@
                     <div v-if="loading" class="d-flex justify-center align-center pa-4">
                         <v-progress-circular indeterminate color="primary" />
                     </div>
-                    <div v-else-if="deptMembers.length === 0" class="d-flex justify-center align-center pa-4 text-grey">
+                    <div v-else-if="positionMembers.length === 0"
+                        class="d-flex justify-center align-center pa-4 text-grey">
                         배치된 사원이 없습니다
                     </div>
-                    <div v-else class="member-item" v-for="member in deptMembers" :key="member.id">
+                    <div v-else class="member-item" v-for="member in positionMembers" :key="member.id">
                         <v-checkbox-btn v-model="selectedMembers" :value="member.id" class="mr-2" />
                         <span class="member-name">{{ member.name }}</span>
                         <span class="member-dept">{{ member.department?.name || '' }}</span>
@@ -46,8 +47,8 @@
 
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue';
-import { useDeptStore } from '@/stores/deptStore';
-import { DeptActivateDTO } from '@/dto/orgstructure/deptDTO';
+import { usePositionStore } from '@/stores/positionStore';
+import { PositionActivateDTO } from '@/dto/orgstructure/positionDTO';
 import { useToast } from 'vue-toastification';
 
 const toast = useToast();
@@ -59,14 +60,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update']);
-const deptStore = useDeptStore();
+const positionStore = usePositionStore();
 const localItem = ref({ ...props.item });
-const deptMembers = ref([]);
+const positionMembers = ref([]);
 const selectedMembers = ref([]);
 const loading = ref(false);
 
 const getActiveButtonText = computed(() => {
-    return localItem.value?.isActive === 'INACTIVE' ? '활성화' : '비활성화';
+    return localItem.value?.isActive === 'ACTIVE' ? '비활성화' : '활성화';
 });
 
 watch(() => props.item, (newVal) => {
@@ -75,15 +76,15 @@ watch(() => props.item, (newVal) => {
     }
 }, { immediate: true });
 
-async function loadDeptMembers(deptId) {
+async function loadPositionMembers(positionId) {
     loading.value = true;
     try {
-        const response = await deptStore.getDeptMembersByDepartment(deptId);
-        deptMembers.value = response || [];
-        selectedMembers.value = deptMembers.value.map(member => member.id);
+        const response = await positionStore.getPositionMembersByPosition(positionId);
+        positionMembers.value = response || [];
+        selectedMembers.value = positionMembers.value.map(member => member.id);
     } catch (error) {
-        console.error('부서별 회원 목록 로딩 실패:', error);
-        deptMembers.value = [];
+        console.error('직책별 회원 목록 로딩 실패:', error);
+        positionMembers.value = [];
     } finally {
         loading.value = false;
     }
@@ -93,40 +94,37 @@ async function onUpdate() {
     if (!localItem.value?.id) return;
 
     try {
-        await deptStore.updateDept(localItem.value.id, localItem.value);
+        await positionStore.updatePosition(localItem.value.id, localItem.value);
         emit('update', localItem.value);
-        toast.success('부서 정보가 수정되었습니다.');
+        toast.success('직책 정보가 수정되었습니다.');
     } catch (error) {
-        console.error('부서 수정 실패:', error);
-        toast.error(error.message || '부서 수정에 실패했습니다.');
+        console.error('직책 수정 실패:', error);
+        toast.error(error.message || '직책 수정에 실패했습니다.');
     }
 }
 
 async function onToggleActive() {
     if (!localItem.value?.id) return;
 
-    const isCurrentlyActive = localItem.value.isActive === 'ACTIVE';
-    const actionText = isCurrentlyActive ? '비활성화' : '활성화';
-
     try {
-        const dto = new DeptActivateDTO({
+        const dto = new PositionActivateDTO({
             id: localItem.value.id,
-            isActive: isCurrentlyActive ? 'INACTIVE' : 'ACTIVE'
+            isActive: localItem.value?.isActive === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
         });
-        await deptStore.petchDeptActivate(localItem.value.id, dto);
+        await positionStore.patchPositionActivate(localItem.value.id, dto);
         localItem.value.isActive = dto.isActive;
-        emit('update', localItem.value);
-        toast.success(`부서가 ${actionText}되었습니다.`);
+        await positionStore.fetchPositionList();
+        toast.success(`직책이 ${getActiveButtonText.value}되었습니다.`);
     } catch (error) {
-        console.error(`부서 ${actionText} 실패:`, error);
-        toast.error(error.message || `부서 ${actionText}에 실패했습니다.`);
+        console.error('직책 활성화 상태 변경 실패:', error);
+        toast.error(error.message || `직책 ${getActiveButtonText.value}에 실패했습니다.`);
     }
 }
 
 async function onAssignMembers() {
     try {
         localItem.value.members = selectedMembers.value;
-        await deptStore.updateDept(localItem.value.id, localItem.value);
+        await positionStore.updatePosition(localItem.value.id, localItem.value);
         emit('update', localItem.value);
         toast.success('사원 배치가 완료되었습니다.');
     } catch (error) {
@@ -143,7 +141,7 @@ function onInput() {
 
 onMounted(() => {
     if (localItem.value.id) {
-        loadDeptMembers(localItem.value.id);
+        loadPositionMembers(localItem.value.id);
     }
 });
 </script>

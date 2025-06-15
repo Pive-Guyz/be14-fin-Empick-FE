@@ -55,7 +55,7 @@ export const petchDeptActivateService = async (id, dto) => {
     try {
         const response = await api.patch(DeptAPI.ACTIVATE(id), null, {
             params: {
-                isActive: dto.isActive === 0 ? 'INACTIVE' : 'ACTIVE'
+                isActive: dto.isActive
             }
         });
         return response.data;

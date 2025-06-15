@@ -38,5 +38,13 @@ export const orgstructureRoutes = [
         meta: {
             requiresAuth: true
         }
+    },
+    {
+        path: '/orgstructure/position-manage',
+        name: 'PositionManagePage',
+        component: () => import('@/views/orgstructure/PositionManagePage.vue'),
+        meta: {
+            requiresAuth: true
+        }
     }
 ]; 
