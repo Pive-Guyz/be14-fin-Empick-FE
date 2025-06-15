@@ -181,5 +181,31 @@ export const employmentRoutes = [
             hideSidebar: false,
             requiresAuth: true
             }
-        }
+        },
+        {
+            path: '/employment/introduce-standard-items/:templateId',
+            name: 'IntroduceStandardItemPage',
+            component: () => import('@/views/employment/IntroduceStandardItemPage.vue'),
+            props: true
+        },
+        
+        {
+            path: '/employment/recruitments/introduce-templates',
+            name: 'IntroduceTemplateListPage',
+            component: () => import('@/views/employment/IntroduceTemplateListPage.vue')
+        },
+        {
+            path: '/employment/recruitments/introduce-templates/create',
+            name: 'IntroduceTemplateCreatePage',
+            component: () => import('@/views/employment/IntroduceTemplateCreatePage.vue')
+        },
+        {
+            path: '/employment/recruitments/introduce-templates/:id',
+            component: () => import('@/views/employment/IntroduceTemplateDetailPage.vue')
+        },
+        {
+            path: '/employment/introduce-items/manage',
+            name: 'IntroduceStandardItemManagePage',
+            component: () => import('@/views/employment/IntroduceStandardItemManagePage.vue')
+        },
 ]; 
