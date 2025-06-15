@@ -2,8 +2,12 @@
     <div class="regist-detail">
         <!-- 상단: 부서명 + 등록 -->
         <div class="top-line">
-            <v-text-field v-model="localDept.name" label="부서명" placeholder="부서명을 입력하세요" dense outlined hide-details
-                @input="onInput" class="flex-grow-1" />
+            <div class="input-group">
+                <v-text-field v-model="localDept.code" label="부서 코드" placeholder="부서 코드를 입력하세요" dense outlined
+                    hide-details class="code-input" @input="onInput" />
+                <v-text-field v-model="localDept.name" label="부서명" placeholder="부서명을 입력하세요" dense outlined hide-details
+                    class="name-input" @input="onInput" />
+            </div>
             <v-btn color="success" @click="onSave">등록</v-btn>
         </div>
 
@@ -210,5 +214,19 @@ onMounted(() => {
 .member-dept {
     color: #888;
     font-size: 1rem;
+}
+
+.input-group {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+}
+
+.code-input {
+    width: 200px;
+}
+
+.name-input {
+    flex: 1;
 }
 </style>

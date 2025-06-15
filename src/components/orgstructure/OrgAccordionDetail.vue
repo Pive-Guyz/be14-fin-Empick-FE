@@ -1,7 +1,12 @@
 <template>
     <div>
         <div class="accordion-header">
-            <v-text-field v-model="localItem.name" variant="outlined" density="comfortable" class="dept-name-input" />
+            <div class="input-group">
+                <v-text-field v-model="localItem.code" label="부서 코드" placeholder="부서 코드를 입력하세요" dense outlined
+                    hide-details class="code-input" @input="onInput" />
+                <v-text-field v-model="localItem.name" label="부서명" placeholder="부서명을 입력하세요" dense outlined hide-details
+                    class="name-input" @input="onInput" />
+            </div>
             <div class="header-actions">
                 <v-btn variant="outlined" class="mr-2" @click="onUpdate">수정</v-btn>
                 <v-btn variant="outlined" @click="onDeactivate">비활성화</v-btn>
@@ -119,10 +124,18 @@ onMounted(() => {
     margin-bottom: 32px;
 }
 
-.dept-name-input {
+.input-group {
+    display: flex;
+    gap: 16px;
     flex: 1;
-    max-width: 340px;
-    margin-right: 24px;
+}
+
+.code-input {
+    width: 200px;
+}
+
+.name-input {
+    flex: 1;
 }
 
 .header-actions {

@@ -57,7 +57,7 @@ import OrgAccordionRegistDetail from '@/components/orgstructure/OrgAccordionRegi
 const deptStore = useDeptStore();
 const search = ref('');
 const registMode = ref(false);
-const registDept = ref({ id: null, name: '' });
+const registDept = ref({ id: null, name: '', code: '' });
 
 const filteredItems = computed(() => {
     if (!search.value) return deptStore.depts;
@@ -77,23 +77,48 @@ onMounted(async () => {
 });
 
 function onAdd() {
-    registDept.value = { id: null, name: '' };
+    registDept.value = { id: null, name: '', code: '' };
     registMode.value = true;
 }
 
 async function onRegistSave(newDept) {
     try {
-        await deptStore.postDeptCreate(newDept);
+        // 필수 필드 검증
+        if (!newDept.name?.trim()) {
+            alert('부서명을 입력해주세요.');
+            return;
+        }
+        if (!newDept.code?.trim()) {
+            alert('부서 코드를 입력해주세요.');
+            return;
+        }
+
+        // 부서 생성 요청
+        await deptStore.postDeptCreate({
+            name: newDept.name.trim(),
+            code: newDept.code.trim(),
+            description: newDept.description?.trim() || '',
+            manager: newDept.manager || null,
+            members: newDept.members || [],
+            isActive: 1  // 활성화 상태를 1로 설정
+        });
+
+        // 목록 새로고침
         await deptStore.getDeptList();
+
         // 새로 추가된 부서에 isOpen 속성 추가
         deptStore.depts.forEach(dept => {
             if (!('isOpen' in dept)) {
                 dept.isOpen = false;
             }
         });
+
+        // 등록 모드 종료
         registMode.value = false;
+        registDept.value = { id: null, name: '', code: '' };
     } catch (error) {
         console.error('부서 생성 실패:', error);
+        alert(error.message || '부서 생성에 실패했습니다.');
     }
 }
 
