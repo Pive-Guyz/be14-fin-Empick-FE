@@ -10,7 +10,8 @@
         <div class="accordion-content">
             <div class="desc-area">
                 <div class="desc-label">부서 설명</div>
-                <div class="desc-box">{{ localItem.description || '부서 설명이 없습니다.' }}</div>
+                <v-textarea v-model="localItem.description" placeholder="부서 설명을 입력하세요" variant="outlined" auto-grow
+                    rows="5" hide-details class="desc-box" />
             </div>
             <div class="member-area">
                 <div class="member-header">
@@ -26,7 +27,7 @@
                     <div v-else class="member-item" v-for="member in deptMembers" :key="member.id">
                         <v-checkbox-btn v-model="selectedMembers" :value="member.id" class="mr-2" />
                         <span class="member-name">{{ member.name }}</span>
-                        <span class="member-dept">{{ member.department?.name || '부서 없음' }}</span>
+                        <span class="member-dept">{{ member.department?.name || '' }}</span>
                     </div>
                 </div>
             </div>
@@ -147,12 +148,26 @@ onMounted(() => {
 }
 
 .desc-box {
-    border: 2px solid #bdbdbd;
-    border-radius: 8px;
+    background: #fff;
+}
+
+.desc-box :deep(.v-field__input) {
     min-height: 180px;
-    padding: 24px 20px;
+    padding: 16px;
     font-size: 1.1rem;
-    background: #fafafa;
+    line-height: 1.5;
+}
+
+.desc-box :deep(.v-field) {
+    background: #fff;
+}
+
+.desc-box :deep(.v-field__outline) {
+    border-color: #bdbdbd;
+}
+
+.desc-box :deep(.v-field--focused .v-field__outline) {
+    border-color: #5b8c4d;
 }
 
 .member-area {
