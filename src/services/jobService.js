@@ -24,7 +24,11 @@ export const jobService = {
 
     async updateJob(id, dto) {
         try {
-            const response = await api.patch(JobAPI.UPDATE.replace('{id}', id), dto);
+            const response = await api.patch(JobAPI.UPDATE.replace('{id}', id), dto, {
+                params: {
+                    isActive: dto.isActive === 0 ? 'INACTIVE' : 'ACTIVE'
+                }
+            });
             return response.data;
         } catch (error) {
             console.error('직무 수정 실패:', error);
@@ -34,7 +38,11 @@ export const jobService = {
 
     async activateJob(jobId, dto) {
         try {
-            const response = await api.patch(JobAPI.TOGGLE_ACTIVE.replace('{id}', jobId), dto);
+            const response = await api.patch(JobAPI.TOGGLE_ACTIVE.replace('{id}', jobId), null, {
+                params: {
+                    isActive: 'ACTIVE'
+                }
+            });
             return response.data;
         } catch (error) {
             console.error('직무 활성화 실패:', error);
@@ -44,7 +52,11 @@ export const jobService = {
 
     async deactivateJob(jobId, dto) {
         try {
-            const response = await api.patch(JobAPI.TOGGLE_ACTIVE.replace('{id}', jobId), dto);
+            const response = await api.patch(JobAPI.TOGGLE_ACTIVE.replace('{id}', jobId), null, {
+                params: {
+                    isActive: 'INACTIVE'
+                }
+            });
             return response.data;
         } catch (error) {
             console.error('직무 비활성화 실패:', error);
