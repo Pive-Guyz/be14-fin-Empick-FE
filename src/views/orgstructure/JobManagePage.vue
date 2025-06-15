@@ -52,9 +52,7 @@ import OrgAccordionItem from '@/components/orgstructure/OrgAccordionItem.vue';
 import JobAccordionDetail from '@/components/orgstructure/JobAccordionDetail.vue';
 import OrgAccordionRegistItem from '@/components/orgstructure/OrgAccordionRegistItem.vue';
 import OrgAccordionRegistDetail from '@/components/orgstructure/OrgAccordionRegistDetail.vue';
-import { useToast } from 'vue-toastification';
 
-const toast = useToast();
 const jobStore = useJobStore();
 const search = ref('');
 const registMode = ref(false);
@@ -74,7 +72,6 @@ onMounted(async () => {
         });
     } catch (error) {
         console.error('직무 목록 로딩 실패:', error);
-        toast.error('직무 목록을 불러오는데 실패했습니다.');
     }
 });
 
@@ -87,11 +84,11 @@ async function onRegistSave(newJob) {
     try {
         // 필수 필드 검증
         if (!newJob.name?.trim()) {
-            toast.error('직무명을 입력해주세요.');
+            alert('직무명을 입력해주세요.');
             return;
         }
         if (!newJob.code?.trim()) {
-            toast.error('직무 코드를 입력해주세요.');
+            alert('직무 코드를 입력해주세요.');
             return;
         }
 
@@ -116,10 +113,9 @@ async function onRegistSave(newJob) {
         // 등록 모드 종료
         registMode.value = false;
         registJob.value = { id: null, name: '', code: '' };
-        toast.success('직무가 생성되었습니다.');
     } catch (error) {
         console.error('직무 생성 실패:', error);
-        toast.error(error.message || '직무 생성에 실패했습니다.');
+        alert(error.message || '직무 생성에 실패했습니다.');
     }
 }
 
@@ -129,12 +125,10 @@ function onRegistCancel() {
 
 async function onJobUpdate(updatedJob) {
     try {
-        await jobStore.updateJob(updatedJob.id, updatedJob);
+        await jobStore.putJobUpdate(updatedJob.id, updatedJob);
         await jobStore.getJobList();
-        toast.success('직무 정보가 수정되었습니다.');
     } catch (error) {
         console.error('직무 수정 실패:', error);
-        toast.error(error.message || '직무 수정에 실패했습니다.');
     }
 }
 
@@ -154,12 +148,12 @@ function onSearch() {
     background: #fff;
 }
 
-.search-input {
+.search-box {
     font-size: 1.2rem;
     height: 56px;
 }
 
-.v-btn {
+.add-button {
     font-size: 1.2rem;
     padding: 12px 36px;
     border-radius: 6px;
