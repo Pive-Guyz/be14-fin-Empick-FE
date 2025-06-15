@@ -19,21 +19,28 @@
 
                 <div class="form-section">
                     <div class="section-label">부서장 설정</div>
-                    <v-combobox v-model="localDept.manager" :items="allMembers" item-text="name" item-value="name"
-                        placeholder="사원을 검색합니다" prepend-inner-icon="mdi-account" outlined dense hide-details />
+                    <v-combobox v-model="localDept.manager" :items="members" item-text="name" item-value="id"
+                        placeholder="사원을 검색합니다" prepend-inner-icon="mdi-account" outlined dense hide-details
+                        :loading="loading" :search-input.sync="searchInput" @update:search-input="onSearch" />
                 </div>
             </div>
 
             <!-- 오른쪽 영역 -->
             <div class="right-area">
                 <div class="member-header">
-                    <v-btn color="success" class="assign-btn">사원 배치</v-btn>
+                    <v-btn color="success" class="assign-btn" @click="onAssignMembers">사원 배치</v-btn>
                 </div>
                 <div class="member-list">
-                    <div class="member-item" v-for="member in sampleMembers" :key="member.name">
-                        <v-checkbox-btn :model-value="false" class="mr-2" />
+                    <div v-if="loading" class="d-flex justify-center align-center pa-4">
+                        <v-progress-circular indeterminate color="primary" />
+                    </div>
+                    <div v-else-if="deptMembers.length === 0" class="d-flex justify-center align-center pa-4 text-grey">
+                        배치된 사원이 없습니다
+                    </div>
+                    <div v-else class="member-item" v-for="member in deptMembers" :key="member.id">
+                        <v-checkbox-btn v-model="selectedMembers" :value="member.id" class="mr-2" />
                         <span class="member-name">{{ member.name }}</span>
-                        <span class="member-dept">{{ member.dept }}</span>
+                        <span class="member-dept">{{ member.department?.name || '부서 없음' }}</span>
                     </div>
                 </div>
             </div>
@@ -42,7 +49,9 @@
 </template>
 
 <script setup>
-import { reactive, watch, defineProps, defineEmits } from 'vue'
+import { reactive, watch, ref, onMounted } from 'vue'
+import { useMemberStore } from '@/stores/memberStore'
+import { useDeptStore } from '@/stores/deptStore'
 
 const props = defineProps({
     modelValue: {
@@ -50,34 +59,77 @@ const props = defineProps({
         required: true
     }
 })
-const emit = defineEmits(['update:modelValue', 'save', 'cancel'])
+const emit = defineEmits(['update:modelValue', 'save'])
 
+const memberStore = useMemberStore()
+const deptStore = useDeptStore()
 const localDept = reactive({ ...props.modelValue })
+const members = ref([])
+const deptMembers = ref([])
+const selectedMembers = ref([])
+const loading = ref(false)
+const searchInput = ref('')
 
 watch(() => props.modelValue, (val) => {
     Object.assign(localDept, val)
+    if (val.id) {
+        loadDeptMembers(val.id)
+    }
 })
+
+async function loadMembers(search = '') {
+    loading.value = true
+    try {
+        await memberStore.getMemberList({ search })
+        members.value = memberStore.members || []
+    } catch (error) {
+        console.error('회원 목록 로딩 실패:', error)
+        members.value = []
+    } finally {
+        loading.value = false
+    }
+}
+
+async function loadDeptMembers(deptId) {
+    loading.value = true
+    try {
+        const response = await deptStore.getDeptMembersByDepartment(deptId)
+        deptMembers.value = response || []
+        // 이미 배치된 사원들은 선택 상태로 표시
+        selectedMembers.value = deptMembers.value.map(member => member.id)
+    } catch (error) {
+        console.error('부서별 회원 목록 로딩 실패:', error)
+        deptMembers.value = []
+    } finally {
+        loading.value = false
+    }
+}
 
 function onInput() {
     emit('update:modelValue', { ...localDept })
 }
+
+function onSearch(value) {
+    if (value) {
+        loadMembers(value)
+    }
+}
+
+function onAssignMembers() {
+    localDept.members = selectedMembers.value
+    onInput()
+}
+
 function onSave() {
     emit('save', { ...localDept })
 }
-function onCancel() {
-    emit('cancel')
-}
 
-// 예시 데이터
-const sampleMembers = [
-    { name: '서민종', dept: '인사' },
-    { name: '곽우석', dept: '영업' },
-    { name: '김석희', dept: '개발' },
-    { name: '최혜민', dept: '회계' },
-    { name: '이상모', dept: '개발' },
-]
-
-const allMembers = sampleMembers.map(m => ({ name: m.name }))
+onMounted(() => {
+    loadMembers()
+    if (localDept.id) {
+        loadDeptMembers(localDept.id)
+    }
+})
 </script>
 
 

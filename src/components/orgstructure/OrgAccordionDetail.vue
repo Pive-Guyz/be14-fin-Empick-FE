@@ -1,26 +1,32 @@
 <template>
     <div>
         <div class="accordion-header">
-            <v-text-field v-model="item.name" variant="outlined" density="comfortable" class="dept-name-input" />
+            <v-text-field v-model="localItem.name" variant="outlined" density="comfortable" class="dept-name-input" />
             <div class="header-actions">
-                <v-btn variant="outlined" class="mr-2">수정</v-btn>
-                <v-btn variant="outlined">비활성성</v-btn>
+                <v-btn variant="outlined" class="mr-2" @click="onUpdate">수정</v-btn>
+                <v-btn variant="outlined" @click="onDeactivate">비활성화</v-btn>
             </div>
         </div>
         <div class="accordion-content">
             <div class="desc-area">
                 <div class="desc-label">부서 설명</div>
-                <div class="desc-box">법무하는 부서임</div>
+                <div class="desc-box">{{ localItem.description || '부서 설명이 없습니다.' }}</div>
             </div>
             <div class="member-area">
                 <div class="member-header">
-                    <v-btn color="success" class="assign-btn">사원 배치</v-btn>
+                    <v-btn color="success" class="assign-btn" @click="onAssignMembers">사원 배치</v-btn>
                 </div>
                 <div class="member-list">
-                    <div class="member-item" v-for="member in sampleMembers" :key="member.name">
-                        <v-checkbox-btn :model-value="false" class="mr-2" />
+                    <div v-if="loading" class="d-flex justify-center align-center pa-4">
+                        <v-progress-circular indeterminate color="primary" />
+                    </div>
+                    <div v-else-if="deptMembers.length === 0" class="d-flex justify-center align-center pa-4 text-grey">
+                        배치된 사원이 없습니다
+                    </div>
+                    <div v-else class="member-item" v-for="member in deptMembers" :key="member.id">
+                        <v-checkbox-btn v-model="selectedMembers" :value="member.id" class="mr-2" />
                         <span class="member-name">{{ member.name }}</span>
-                        <span class="member-dept">{{ member.dept }}</span>
+                        <span class="member-dept">{{ member.department?.name || '부서 없음' }}</span>
                     </div>
                 </div>
             </div>
@@ -30,19 +36,78 @@
 </template>
 
 <script setup>
+import { ref, reactive, watch, onMounted } from 'vue';
+import { useDeptStore } from '@/stores/deptStore';
+
 const props = defineProps({
     item: {
         type: Object,
         required: true
     }
 });
-const sampleMembers = [
-    { name: '서민중', dept: '인사' },
-    { name: '곽우석', dept: '영업' },
-    { name: '김석희', dept: '개발' },
-    { name: '최혜민', dept: '회계' },
-    { name: '이상모', dept: '개발' },
-];
+
+const emit = defineEmits(['update']);
+
+const deptStore = useDeptStore();
+const localItem = reactive({ ...props.item });
+const deptMembers = ref([]);
+const selectedMembers = ref([]);
+const loading = ref(false);
+
+watch(() => props.item, (val) => {
+    Object.assign(localItem, val);
+    if (val.id) {
+        loadDeptMembers(val.id);
+    }
+});
+
+async function loadDeptMembers(deptId) {
+    loading.value = true;
+    try {
+        const response = await deptStore.getDeptMembersByDepartment(deptId);
+        deptMembers.value = response || [];
+        selectedMembers.value = deptMembers.value.map(member => member.id);
+    } catch (error) {
+        console.error('부서별 회원 목록 로딩 실패:', error);
+        deptMembers.value = [];
+    } finally {
+        loading.value = false;
+    }
+}
+
+async function onUpdate() {
+    try {
+        await deptStore.updateDept(localItem.id, localItem);
+        emit('update', localItem);
+    } catch (error) {
+        console.error('부서 수정 실패:', error);
+    }
+}
+
+async function onDeactivate() {
+    try {
+        await deptStore.petchDeptActivate(localItem.id);
+        emit('update', localItem);
+    } catch (error) {
+        console.error('부서 비활성화 실패:', error);
+    }
+}
+
+async function onAssignMembers() {
+    try {
+        localItem.members = selectedMembers.value;
+        await deptStore.updateDept(localItem.id, localItem);
+        emit('update', localItem);
+    } catch (error) {
+        console.error('사원 배치 실패:', error);
+    }
+}
+
+onMounted(() => {
+    if (localItem.id) {
+        loadDeptMembers(localItem.id);
+    }
+});
 </script>
 
 <style scoped>
