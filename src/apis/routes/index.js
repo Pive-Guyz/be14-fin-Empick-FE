@@ -6,7 +6,7 @@ import { FileAPI } from './file';
 import { MailAPI } from './mail';
 import { RecruitmentAPI } from './recruitment';
 import { ApplicantAPI } from './applicant';
-
+import { DeptAPI } from './orgstructure';
 
 export const API = {
     AUTH: AuthAPI,
@@ -16,5 +16,6 @@ export const API = {
     FILE: FileAPI,
     MAIL: MailAPI,
     RECRUITMENT: RecruitmentAPI,
-    APPLICANT: ApplicantAPI
+    APPLICANT: ApplicantAPI,
+    DEPT: DeptAPI
 };
