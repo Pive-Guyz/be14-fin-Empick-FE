@@ -14,5 +14,13 @@ export const orgstructureRoutes = [
         meta: {
             requiresAuth: true
         }
+    },
+    {
+        path: '/orgstructure/dept-manage',
+        name: 'DeptManagePage',
+        component: () => import('@/views/orgstructure/DeptManagePage.vue'),
+        meta: {
+            requiresAuth: true
+        }
     }
 ]; 
