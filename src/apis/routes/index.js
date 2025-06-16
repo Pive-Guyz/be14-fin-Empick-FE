@@ -7,7 +7,10 @@ import { MailAPI } from './mail';
 import { RecruitmentAPI } from './recruitment';
 import { ApplicantAPI, ApplicantBookmarkAPI, ApplicationAPI, ApplicationResponseAPI } from './application';
 
-
+import { DeptAPI } from './orgstructure';
+import { JobAPI } from './job';
+import { RankAPI } from './rank';
+import { PositionAPI } from './position';
 
 export const API = {
     AUTH: AuthAPI,
@@ -18,6 +21,10 @@ export const API = {
     MAIL: MailAPI,
     RECRUITMENT: RecruitmentAPI,
     APPLICANT: ApplicantAPI,
+    DEPT: DeptAPI,
+    JOB: JobAPI,
+    RANK: RankAPI,
+    POSITION: PositionAPI,
     APPLICANTBOOKMARK: ApplicantBookmarkAPI,
     APPLICATION: ApplicationAPI,
     APPLICATIONRESPONSE: ApplicationResponseAPI,
