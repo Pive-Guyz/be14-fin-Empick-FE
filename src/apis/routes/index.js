@@ -5,7 +5,8 @@ import { MemberAPI } from './member';
 import { FileAPI } from './file';
 import { MailAPI } from './mail';
 import { RecruitmentAPI } from './recruitment';
-import { ApplicantAPI } from './applicant';
+import { ApplicantAPI, ApplicantBookmarkAPI, ApplicationAPI, ApplicationResponseAPI } from './application';
+
 import { DeptAPI } from './orgstructure';
 import { JobAPI } from './job';
 import { RankAPI } from './rank';
@@ -21,5 +22,9 @@ export const API = {
     APPLICANT: ApplicantAPI,
     DEPT: DeptAPI,
     JOB: JobAPI,
-    RANK: RankAPI
+    RANK: RankAPI,
+    APPLICANTBOOKMARK: ApplicantBookmarkAPI,
+    APPLICATION: ApplicationAPI,
+    APPLICATIONRESPONSE: ApplicationResponseAPI,
 };
+
