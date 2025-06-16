@@ -43,7 +43,8 @@
             <v-list-item-title>
               {{ opt.optionNumber ? `${opt.optionNumber}. ` : '' }}{{ opt.content }}
               <span v-if="question.answer === opt.content" class="text-success font-weight-bold">
-                <v-icon v-if="question.answer === opt.content" color="green" size="small" class="ml-1">mdi-check-circle</v-icon>
+                <v-icon v-if="question.answer === opt.content" color="green" size="small"
+                  class="ml-1">mdi-check-circle</v-icon>
               </span>
             </v-list-item-title>
           </v-list-item>

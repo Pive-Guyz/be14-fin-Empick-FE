@@ -25,33 +25,20 @@
         <v-sheet class="pa-4" elevation="2">
           <!-- 요일 -->
           <v-row dense class="weekday-row">
-            <v-col
-              v-for="(day, index) in daysOfWeek"
-              :key="index"
-              class="text-center font-weight-bold"
+            <v-col v-for="(day, index) in daysOfWeek" :key="index" class="text-center font-weight-bold"
               :style="{ color: index === 0 ? 'red' : index === 6 ? 'blue' : 'black' }"
-              style="flex-basis: 14.28%; max-width: 14.28%;"
-            >
+              style="flex-basis: 14.28%; max-width: 14.28%;">
               {{ day }}
             </v-col>
           </v-row>
 
           <!-- 날짜 -->
           <v-row dense v-for="(week, wIdx) in weeks" :key="wIdx" class="week-row">
-            <v-col
-              v-for="(day, dIdx) in week"
-              :key="dIdx"
-              class="text-center pa-0"
-              style="flex-basis: 14.28%; max-width: 14.28%;"
-            >
-              <v-btn
-                v-if="day"
-                :color="selectedDay === day ? 'primary' : undefined"
-                @click="selectDay(day)"
-                class="calendar-day-btn"
-                :style="{ color: dIdx === 0 ? 'red' : dIdx === 6 ? 'blue' : '' }"
-              >
-              {{ day }}
+            <v-col v-for="(day, dIdx) in week" :key="dIdx" class="text-center pa-0"
+              style="flex-basis: 14.28%; max-width: 14.28%;">
+              <v-btn v-if="day" :color="selectedDay === day ? 'primary' : undefined" @click="selectDay(day)"
+                class="calendar-day-btn" :style="{ color: dIdx === 0 ? 'red' : dIdx === 6 ? 'blue' : '' }">
+                {{ day }}
               </v-btn>
             </v-col>
           </v-row>
@@ -62,7 +49,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, defineEmits } from 'vue'
+import { ref, computed, watch } from 'vue'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ko'
 import 'dayjs/locale/en'
@@ -168,7 +155,8 @@ const nextMonth = () => {
   color: black;
   font-weight: 500;
   padding: 0;
-  margin: 2px; /* 버튼 사이 간격 축소 */
+  margin: 2px;
+  /* 버튼 사이 간격 축소 */
 }
 
 .calendar-day-btn:hover {
@@ -180,8 +168,8 @@ const nextMonth = () => {
   margin: 0;
 }
 
-.weekday-row > .v-col,
-.week-row > .v-col {
+.weekday-row>.v-col,
+.week-row>.v-col {
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
@@ -189,6 +177,6 @@ const nextMonth = () => {
 .v-btn.default {
   color: black;
   background-color: #f0f0f0;
-  
+
 }
 </style>
