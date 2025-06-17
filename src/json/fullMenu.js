@@ -1,4 +1,3 @@
-import { routeMap } from '@/router/index.js';
 
 // 메뉴 구조
 export const fullMenu = {

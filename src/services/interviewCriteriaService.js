@@ -85,7 +85,20 @@ export const getCriteriaByIdService = async (id, options = {}) => {
     }, options);
 }
 
-// 내용으로 면접 평가 기준을 검색하는 서비스
+// 평가표id로 면접 평가 기준을 조회하는 서비스
+export const getCriteriaBySheetIdService = async (sheetId, options = {}) => {
+    return withErrorHandling(async () => {
+        const response = await api.get(InterviewAPI.GET_CRITERIA_BY_SHEET_ID(sheetId));
+        const apiResponse = ApiResponseDTO.fromJSON(response.data);
+        if (!apiResponse.success) {
+            throwCustomApiError(apiResponse.code, apiResponse.message, 400);
+        }
+
+        return apiResponse.data.map(InterviewCriteriaResponseDTO.fromJSON);
+    }, options);
+}
+
+// 제목으로 면접 평가 기준을 검색하는 서비스
 export const searchCriteriaByTitleService = async (title, options = {}) => {
     return withErrorHandling(async () => {
         const response = await api.get(InterviewAPI.SEARCH_CRITERIA_BY_TITLE(title));
@@ -96,4 +109,3 @@ export const searchCriteriaByTitleService = async (title, options = {}) => {
         return apiResponse.data.map(item => InterviewCriteriaResponseDTO.fromJSON(item));
     }, options);
 }
-

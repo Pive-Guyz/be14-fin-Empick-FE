@@ -1,4 +1,3 @@
-// 📁 src/services/recruitmentRequestService.js
 import api from '@/apis/apiClient';
 import { API } from '@/apis/routes';
 import ApiResponseDTO from '@/dto/common/apiResponseDTO';
@@ -23,6 +22,7 @@ export const fetchRecruitmentRequestList = async (options = {}) => {
 export const fetchRecruitmentRequestDetail = async (id, options = {}) => {
     return withErrorHandling(async () => {
         const response = await api.get(API.RECRUITMENT.REQUEST_DETAIL(id));
+        console.log('📡 요청서 응답', response.data);
         const apiResponse = ApiResponseDTO.fromJSON(response.data);
 
         if (!apiResponse.success) {
@@ -37,6 +37,34 @@ export const fetchRecruitmentRequestDetail = async (id, options = {}) => {
 export const createRecruitmentRequest = async (payload, options = {}) => {
     return withErrorHandling(async () => {
         const response = await api.post(API.RECRUITMENT.REQUEST_CREATE, payload);
+        const apiResponse = ApiResponseDTO.fromJSON(response.data);
+
+        if (!apiResponse.success) {
+            throwCustomApiError(apiResponse.code, apiResponse.message, 400);
+        }
+
+        return apiResponse.data;
+    }, options);
+};
+
+// 직무(포지션) 목록 조회
+export const fetchJobList = async (options = {}) => {
+    return withErrorHandling(async () => {
+        const response = await api.get(API.RECRUITMENT.JOB_LIST);
+        const apiResponse = ApiResponseDTO.fromJSON(response.data);
+
+        if (!apiResponse.success) {
+            throwCustomApiError(apiResponse.code, apiResponse.message, 400);
+        }
+
+        return apiResponse.data;
+    }, options);
+};
+
+// 부서 목록 조회
+export const fetchDepartmentList = async (options = {}) => {
+    return withErrorHandling(async () => {
+        const response = await api.get(API.RECRUITMENT.DEPARTMENT_LIST);
         const apiResponse = ApiResponseDTO.fromJSON(response.data);
 
         if (!apiResponse.success) {

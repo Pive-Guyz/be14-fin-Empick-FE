@@ -24,16 +24,16 @@ export const getQuestionsService = async (options = {}) => {
 };
 
 // 실무테스트 문제 상세 조회 서비스
-export const getQuestionDetailService = async (options = {}) => {
+export const getQuestionDetailService = async (questionId, options = {}) => {
     return withErrorHandling(async () => {
-        const response = await api.get(JobtestAPI.QUESTION_DETAIL);
+        const response = await api.get(JobtestAPI.QUESTION_DETAIL(questionId));
         const apiResponse = ApiResponseDTO.fromJSON(response.data);
 
         if (!apiResponse.success) {
             throwCustomApiError(apiResponse.code, apiResponse.message, 400);
         }
 
-        return apiResponse.data.map(item => QuestionDetailResponseDTO.fromJSON(item));
+        return QuestionDetailResponseDTO.fromJSON(apiResponse.data);
     }, options);
 }
 
@@ -50,6 +50,35 @@ export const createQuestionService = async (
             throwCustomApiError(apiResponse.code, apiResponse.message, 400);
         }
 
+        return apiResponse.message;
+    }, options);
+};
+
+// 실무테스트 문제 삭제
+export const deleteQuestionService = async (
+    questionId,
+    options = {}
+) => {
+    return withErrorHandling(async () => {
+        const response = await api.delete(JobtestAPI.QUESTION_DETAIL(questionId));
+        const apiResponse = ApiResponseDTO.fromJSON(response.data);
+
+        if (!apiResponse.success) {
+            throwCustomApiError(apiResponse.code, apiResponse.message, 400);
+        }
+
+        return apiResponse.message;
+    }, options);
+};
+
+// 선택지 전체 삭제 (문제 ID 기준)
+export const deleteQuestionOptionsByQuestionId = async (questionId, options = {}) => {
+    return withErrorHandling(async () => {
+        const response = await api.delete(JobtestAPI.QUESTION_OPTION_DETAIL(questionId));
+        const apiResponse = ApiResponseDTO.fromJSON(response.data);
+        if (!apiResponse.success) {
+            throwCustomApiError(apiResponse.code, apiResponse.message, 400);
+        }
         return apiResponse.message;
     }, options);
 };

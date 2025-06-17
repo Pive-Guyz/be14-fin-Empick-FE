@@ -28,7 +28,7 @@ export const employmentRoutes = [
     },
     // 실무테스트 상세 조회 페이지
     {
-        path: '/employment/jobtests/:id',
+        path: '/employment/jobtests/:jobtestId',
         name: 'JobtestDetail',
         component: () => import('@/views/employment/JobtestDetailPage.vue'),
         props: true,
@@ -73,6 +73,14 @@ export const employmentRoutes = [
         props: true,
         meta: { requiresAuth: true }
     },
+    // 실무테스트 입장 페이지
+    {
+        path: '/employment/jobtest/enter/:jobtestId',
+        name: 'JobtestEnter',
+        component: () => import('@/views/employment/JobtestEnterPage.vue'),
+        props: true,
+        meta: { requiresAuth: false }
+    },
 
     //    <------------------- 채용공고 -------------------->
     // 채용 요청서 목록 페이지
@@ -98,12 +106,13 @@ export const employmentRoutes = [
     {
         path: '/employment/recruitment-requests/create',
         name: 'RecruitmentRequestCreate',
-        component: () => import('@/views/employment/RecruitmentRequestCreateView.vue'),
-        meta: { 
-            requiresAuth: true 
+        component: () => import('@/views/employment/RecruitmentRequestCreatePage.vue'),
+        meta: {
+            requiresAuth: true
         }
     },
-    
+
+
     // 채용 공고 목록 페이지
     {
         path: '/employment/recruitments',
@@ -116,7 +125,7 @@ export const employmentRoutes = [
     // 채용 공고 상세 조회 페이지
     {
         path: '/employment/recruitments/:id',
-        name: 'RecruitmentDetail',
+        name: 'RecruitmentDetails',
         component: () => import('@/views/employment/RecruitmentDetailPage.vue'),
         props: true,
         meta: {
@@ -128,37 +137,84 @@ export const employmentRoutes = [
         path: '/employment/recruitments/create',
         name: 'RecruitmentCreate',
         component: () => import('@/views/employment/RecruitmentCreatePage.vue'),
-        meta: { 
-            requiresAuth: true 
+        meta: {
+            requiresAuth: true
         }
     },
-        // <---------- 면         접 ---------->
-    
-        {
-            path: '/employment/interview-criteria',
-            name: 'InterviewSheetPage',
-            component: () => import('@/views/employment/InterviewSheetPage.vue'),
-            meta: {
-                requiresAuth: true
-            }
-        },
-        {
-            path: '/employment/interview-criteria/create',
-            name: 'CreateInterviewSheetPage',
-            component: () => import('@/views/employment/CreateInterviewSheetPage.vue'),
-            meta: {
-                requiresAuth: true
-            }
-        },
+    // 지원서 항목 구성 페이지
+    {
+        path: '/employment/application-items/select',
+        name: 'ApplicationItemSelectPage',
+        component: () => import('@/views/employment/ApplicationItemSelectPage.vue'),
+        meta: { requiresAuth: true }
+    },
 
+    // <---------- 면         접 ---------->
 
-          {
+    {
+        path: '/employment/interview-criteria',
+        name: 'InterviewSheetPage',
+        component: () => import('@/views/employment/InterviewSheetPage.vue'),
+        meta: {
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/employment/interview-criteria/create',
+        name: 'CreateInterviewSheetPage',
+        component: () => import('@/views/employment/CreateInterviewSheetPage.vue'),
+        meta: {
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/employment/interview-score',
+        name: 'InputInterviewScorePage',
+        component: () => import('@/views/employment/InputInterviewScorePage.vue'),
+        meta: {
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/employment/interviews',
+        name: 'InterviewSchedulePage',
+        component: () => import('@/views/employment/InterviewSchedulePage.vue'),
+        meta: {
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/employment/interviews/detail/:applicationId',
+        name: 'InterviewDetailPage',
+        component: () => import('@/views/employment/InterviewDetailPage.vue'),
+        meta: {
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/employment/interviews/create',
+        name: 'CreateInterviewPage',
+        component: () => import('@/views/employment/CreateInterviewPage.vue'),
+        meta: {
+            requiresAuth: true
+        }
+    },
+
+    // <---------- 지원서 / 지원자 ---------->
+    {
         path: '/employment/applicant',
         name: 'ApplicantPage',
         component: () => import('@/views/employment/ApplicantPage.vue'),
         meta: { requiresAuth: true }
-},
-    
-
-
+    },
+    // 지원서 상세 조회 페이지 (기존 ApplicationPage를 상세 페이지로 사용)
+    {
+        path: '/employment/applications/:applicationId',
+        name: 'ApplicationDetail',
+        component: () => import('@/views/employment/ApplicationPage.vue'),
+        props: true,
+        meta: {
+            requiresAuth: true
+        }
+    },
 ]; 
