@@ -343,7 +343,6 @@ export const employmentRoutes = [
             requiredRoles: ['ROLE_HR_ACCESS']
         }
     },
-
     // 지원자 인적사항 등록 페이지
     {
         path: '/employment/applicants/register',
@@ -354,6 +353,7 @@ export const employmentRoutes = [
             requiredRoles: ['ROLE_HR_ACCESS']
         }
     },
+
     {
         path: '/employment/introduce-standard-items/:templateId',
         name: 'IntroduceStandardItemPage',
@@ -364,9 +364,35 @@ export const employmentRoutes = [
             requiredRoles: ['ROLE_HR_ACCESS']
         }
     },
+    {
+        path: '/employment/introduce-templates',
+        name: 'IntroduceTemplateListPage',
+        component: () => import('@/views/employment/IntroduceTemplateListPage.vue'),
+        meta: {
+            requiresAuth: true,
+            requiredRoles: ['ROLE_HR_ACCESS']
+        }
+    },
 
     {
-        path: '/employment/recruitments/introduce-templates',
+        path: '/employment/introduce-templates/create',
+        name: 'IntroduceTemplateCreatePage',
+        component: () => import('@/views/employment/IntroduceTemplateCreatePage.vue'),
+        meta: {
+            requiresAuth: true,
+            requiredRoles: ['ROLE_HR_ACCESS']
+        }
+    },
+    // 자기소개서
+    {
+        path: '/employment/introduce-standard-items/:templateId',
+        name: 'IntroduceStandardItemPage',
+        component: () => import('@/views/employment/IntroduceStandardItemPage.vue'),
+            props: true
+        },
+
+    {
+        path: '/employment/introduce-templates',
         name: 'IntroduceTemplateListPage',
         component: () => import('@/views/employment/IntroduceTemplateListPage.vue'),
         meta: {
@@ -375,7 +401,7 @@ export const employmentRoutes = [
         }
     },
     {
-        path: '/employment/recruitments/introduce-templates/create',
+        path: '/employment/introduce-templates/create',
         name: 'IntroduceTemplateCreatePage',
         component: () => import('@/views/employment/IntroduceTemplateCreatePage.vue'),
         meta: {
@@ -384,7 +410,8 @@ export const employmentRoutes = [
         }
     },
     {
-        path: '/employment/recruitments/introduce-templates/:id',
+        path: '/employment/introduce-templates/:id',
+        name: 'IntroduceTemplateDetailPage',
         component: () => import('@/views/employment/IntroduceTemplateDetailPage.vue'),
         meta: {
             requiresAuth: true,
@@ -392,12 +419,46 @@ export const employmentRoutes = [
         }
     },
     {
-        path: '/employment/introduce-items/manage',
-        name: 'IntroduceStandardItemManagePage',
-        component: () => import('@/views/employment/IntroduceStandardItemManagePage.vue'),
+        path: '/employment/introduce-standard-items/manage',
+        name: 'IntroduceStandardItemCreatePage',
+        component: () => import('@/views/employment/IntroduceStandardItemCreatePage.vue'),
         meta: {
             requiresAuth: true,
             requiredRoles: ['ROLE_HR_ACCESS']
         }
+    },
+    {
+        path: '/employment/introduce-standard/create',
+        name: 'IntroduceStandardCreatePage',
+        component: () => import('@/views/employment/IntroduceStandardCreatePage.vue'),
+        meta: {
+            requiresAuth: true,
+            requiredRoles: ['ROLE_HR_ACCESS']
+        }
+    },
+    {
+        path: '/employment/introduce-standard/list',
+        name: 'IntroduceStandardListPage',
+        component: () => import('@/views/employment/IntroduceStandardListPage.vue'),
+        meta: {
+            requiresAuth: true,
+            requiredRoles: ['ROLE_HR_ACCESS']
+        }
+    },
+    {
+        path: '/employment/introduce-items/manage',
+        name: 'IntroduceTemplateItemManagePage',
+        component: () => import('@/views/employment/IntroduceTemplateItemManagePage.vue'),
+        meta: {
+            requiresAuth: true,
+            requiredRoles: ['ROLE_HR_ACCESS']
+        }
+    },
+    {
+        path: '/employment/introduce-standard/:id',
+        name: 'IntroduceStandardDetail',
+        component: () => import('@/views/employment/IntroduceStandardDetailPage.vue'),
+        meta: { requiresAuth: true }
     }
+
 ];
