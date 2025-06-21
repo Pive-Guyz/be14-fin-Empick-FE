@@ -9,3 +9,7 @@ export const fetchStandardItems = async () => {
 export const createStandardItem = async (content, memberId) => {
   return apiClient.post(IntroduceAPI.CREATE_STANDARD_ITEM, { content, memberId })
 }
+
+export const deleteStandardItem = async (id) => {
+  return apiClient.delete(IntroduceAPI.DELETE_STANDARD_ITEM(id))
+}

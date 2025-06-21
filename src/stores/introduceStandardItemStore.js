@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { fetchStandardItems, createStandardItem } from '@/services/introduceStandardItemService'
+import { fetchStandardItems, createStandardItem, fetchItemsByStandardId, deleteStandardItem } from '@/services/introduceStandardItemService'
 import apiClient from '@/apis/apiClient'
 import { IntroduceAPI } from '@/apis/routes/introduce'
 import { useMemberStore } from '@/stores/memberStore'
@@ -38,7 +38,7 @@ export const useIntroduceStandardItemStore = defineStore('introduceStandardItem'
     },
     async removeItem(id) {
       try {
-        await apiClient.delete(IntroduceAPI.DELETE_STANDARD_ITEM(id))
+        await deleteStandardItem(id)
         await this.fetchItems()
       } catch (e) {
         this.error = e
