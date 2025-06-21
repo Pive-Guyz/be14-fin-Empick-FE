@@ -284,6 +284,7 @@ export const employmentRoutes = [
         name: 'ApplicantRecruitmentPage',
         component: () => import('@/views/employment/ApplicantRecruitmentPage.vue'),
 
+
     },
 
     // 채용공고별 지원자 목록 페이지
@@ -392,12 +393,12 @@ export const employmentRoutes = [
         }
     },
     {
-        path: '/employment/introduce-items/manage',
-        name: 'IntroduceStandardItemManagePage',
-        component: () => import('@/views/employment/IntroduceStandardItemManagePage.vue'),
+        path: '/employment/introduce-standard/list',
+        name: 'IntroduceStandardListPage',
+        component: () => import('@/views/employment/IntroduceStandardListPage.vue'),
         meta: {
             requiresAuth: true,
             requiredRoles: ['ROLE_HR_ACCESS']
         }
-    }
+    },
 ];

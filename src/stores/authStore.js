@@ -11,6 +11,7 @@ import { jwtDecode } from 'jwt-decode';
 
 export const useAuthStore = defineStore('auth', () => {
     const router = useRouter();
+    const memberStore = useMemberStore();
 
     // 상태 정의
     const isAuthenticated = ref(false);
@@ -56,8 +57,10 @@ export const useAuthStore = defineStore('auth', () => {
                     ...response.user,
                     roles
                 };
+                memberStore.setUser(response.user);
             } else {
                 userInfo.value = { roles };
+                memberStore.setUser(null);
             }
 
             // 멤버 정보 및 결재문서 자동 로딩
@@ -83,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
             accessToken.value = '';
             refreshToken.value = '';
             userInfo.value = null;
+            memberStore.setUser(null);
         } finally {
             loading.value = false;
         }

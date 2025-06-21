@@ -52,6 +52,8 @@ export const useMemberStore = defineStore('member', {
         // 🖼️ 프로필 이미지 관리
         profileImageUrl: '',
         defaultProfileImageUrl: '/images/default-profile.png',
+        user: null,
+        memberId: null,
         profileImageCache: new Map(), // 프로필 이미지 캐시
 
         // 📋 기본 사원 목록 (캐싱용 - 단순 조회만)
@@ -75,6 +77,10 @@ export const useMemberStore = defineStore('member', {
     },
 
     actions: {
+        setUser(user) {
+            this.user = user;
+            this.memberId = user?.id || null;
+        },
         // 🔄 상태 초기화
         reset() {
             this.form = {
@@ -99,8 +105,26 @@ export const useMemberStore = defineStore('member', {
             this.loading = false;
             this.error = '';
             this.profileImageUrl = '';
-
+            this.user = null;
+            this.memberId = null;
             localStorage.removeItem('member-store');
+        },
+
+        // 📝 사원 등록
+        async registerMember(memberData) {
+            this.loading = true;
+            this.registerError = null;
+            try {
+                const result = await registerMemberService(memberData);
+                this.registerResult = result;
+                this.invalidateMembersCache();
+                return result;
+            } catch (err) {
+                this.registerError = err.message;
+                throw err;
+            } finally {
+                this.loading = false;
+            }
         },
 
         // 🧑‍💼 내 정보 조회
