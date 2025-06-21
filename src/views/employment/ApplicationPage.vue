@@ -199,6 +199,7 @@
       </v-col>
 
 
+
       <!-- 우측: 평가 상세 -->
       <v-col cols="12" lg="7">
         <v-card class="modern-card evaluation-detail-card">
@@ -285,8 +286,15 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import IntroduceResult from '@/components/employment/IntroduceEvaluationInput.vue'
+import { useApplicationStore } from '@/stores/applicationStore'
+import { useToast } from 'vue-toastification'
+
 
 const route = useRoute()
+const applicationStore = useApplicationStore()
+const toast = useToast()
+const applicationId = Number(route.params.id)
+
 const router = useRouter()
 
 const evaluationComponent = ref(IntroduceResult)
