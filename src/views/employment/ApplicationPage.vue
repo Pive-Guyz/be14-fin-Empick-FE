@@ -998,17 +998,25 @@ const getFullImageUrl = (profileUrl) => {
     return profileUrl
   }
   
-  // 임시로 테스트 이미지 사용 (백엔드 API 문제 확인용)
-  console.log('⚠️ 임시 테스트: 백엔드 API 대신 랜덤 이미지 사용')
-  const testUrl = `https://picsum.photos/seed/${profileUrl.replace(/[^a-zA-Z0-9]/g, '')}/200`
-  console.log('🔗 테스트 이미지 URL:', testUrl)
+  // profiles/ 경로 제거 (S3에는 루트에 저장됨)
+  let actualKey = profileUrl
+  if (profileUrl.startsWith('profiles/')) {
+    actualKey = profileUrl.replace('profiles/', '')
+    console.log('🔧 profiles/ 경로 제거:', {
+      original: profileUrl,
+      actual: actualKey
+    })
+  }
   
-  // 실제 백엔드 다운로드 API URL도 출력 (디버깅용)
-  const downloadUrl = `http://localhost:8080/api/v1/files/download?key=${encodeURIComponent(profileUrl)}`
-  console.log('🔗 백엔드 다운로드 API (테스트용):', downloadUrl)
-  console.log('🌐 브라우저에서 백엔드 API 테스트:', downloadUrl)
+  // 백엔드 다운로드 API 사용
+  const downloadUrl = `http://localhost:8080/api/v1/files/download?key=${encodeURIComponent(actualKey)}`
+  console.log('🔗 백엔드 다운로드 API 사용:', {
+    originalKey: profileUrl,
+    actualKey: actualKey,
+    downloadUrl: downloadUrl
+  })
   
-  return testUrl
+  return downloadUrl
 }
 
 
