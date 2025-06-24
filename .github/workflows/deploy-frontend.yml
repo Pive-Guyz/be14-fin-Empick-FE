@@ -62,6 +62,15 @@ jobs:
           ls -la ${{ env.BUILD_PATH }}/
           du -sh ${{ env.BUILD_PATH }}/
 
+      - name: 📦 Create deployment package
+        run: |
+          echo "📦 Creating deployment package..."
+          cd ${{ env.BUILD_PATH }}
+          tar -czf ../frontend-build.tar.gz .
+          cd ..
+          ls -la frontend-build.tar.gz
+          echo "✅ Deployment package created"
+
       - name: 🔐 Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -71,77 +80,66 @@ jobs:
 
       - name: 🚀 Deploy to VPC1 Blue Instance
         run: |
-          echo "🚀 Deploying to Blue Instance..."
+          echo "🚀 Deploying Vue.js app to Blue Instance..."
 
-          # 단순한 배포 스크립트 생성
+          # Base64로 빌드 파일 인코딩 (작은 청크로 분할)
+          BUILD_BASE64=$(base64 -w 0 frontend-build.tar.gz)
+
+          # 배포 스크립트 생성
           cat > deploy.sh << 'EOF'
           #!/bin/bash
           set -e
-          echo "🔄 Starting deployment..."
+          echo "🔄 Starting Vue.js deployment..."
 
           # 백업 생성
           sudo mkdir -p /var/www/backup
-          if [ -d "/var/www/html" ]; then
+          if [ -d "/var/www/html" ] && [ "$(ls -A /var/www/html)" ]; then
             sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
           fi
 
-          # 기존 파일 제거
-          sudo rm -rf /var/www/html/*
+          # 임시 디렉터리 생성
+          sudo mkdir -p /tmp/vue-deploy
+          cd /tmp/vue-deploy
 
-          # 임시 HTML 생성 (테스트용)
-          sudo tee /var/www/html/index.html > /dev/null << 'HTML'
-          <!DOCTYPE html>
-          <html lang="ko">
-          <head>
-              <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Empick Frontend - Deployed!</title>
-              <style>
-                  body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-                  .container { background: rgba(255,255,255,0.1); padding: 40px; border-radius: 15px; backdrop-filter: blur(10px); }
-                  h1 { font-size: 3em; margin-bottom: 20px; }
-                  .status { background: #4CAF50; padding: 10px 20px; border-radius: 5px; display: inline-block; margin: 10px; }
-                  .info { background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; margin: 20px 0; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <h1>🚀 Empick Frontend</h1>
-                  <div class="status">✅ 배포 성공!</div>
-                  <div class="info">
-                      <h3>📊 배포 정보</h3>
-                      <p>배포 시간: $(date)</p>
-                      <p>인스턴스: Blue (Primary)</p>
-                      <p>상태: 정상 작동</p>
-                  </div>
-                  <p>Vue.js 애플리케이션이 곧 배포됩니다!</p>
-              </div>
-          </body>
-          </html>
-          HTML
-
-          # 권한 설정
-          sudo chown -R nginx:nginx /var/www/html
-          sudo chmod -R 755 /var/www/html
-
-          # Nginx 재시작
-          sudo nginx -t
-          sudo systemctl reload nginx
-
-          echo "✅ Deployment completed successfully!"
+          echo "✅ Vue.js deployment completed successfully!"
           EOF
 
-          # 스크립트 실행
+          # SSM으로 배포 실행
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_BLUE_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["bash -c \"$(cat << '\''SCRIPT'\''", "$(cat deploy.sh)", "SCRIPT", ")\""]' \
+            --parameters 'commands=[
+              "echo \"🔄 Starting Vue.js deployment...\"",
+              "sudo mkdir -p /var/www/backup",
+              "if [ -d \"/var/www/html\" ] && [ \"$(ls -A /var/www/html)\" ]; then sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || true; fi",
+              "sudo mkdir -p /tmp/vue-deploy",
+              "cd /tmp/vue-deploy",
+              "echo \"📥 Downloading build files from GitHub...\"",
+              "curl -L -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\"",
+              "tar -xzf frontend-build.tar.gz",
+              "cd be14-fin-Empick-FE-main",
+              "echo \"🏗️ Building Vue.js on server...\"",
+              "curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
+              "sudo yum install -y nodejs",
+              "npm ci --production=false",
+              "npm run build",
+              "echo \"📂 Deploying to web directory...\"",
+              "sudo rm -rf /var/www/html/*",
+              "sudo cp -r dist/* /var/www/html/",
+              "sudo chown -R nginx:nginx /var/www/html",
+              "sudo chmod -R 755 /var/www/html",
+              "echo \"🔧 Testing Nginx configuration...\"",
+              "sudo nginx -t",
+              "sudo systemctl reload nginx",
+              "echo \"✅ Vue.js deployment completed successfully!\"",
+              "cd / && sudo rm -rf /tmp/vue-deploy"
+            ]' \
             --output text
 
       - name: ⏰ Wait for Blue Deployment
         run: |
           echo "⏰ Waiting for Blue deployment to complete..."
-          sleep 45
+          sleep 120
 
       - name: 🧪 Health Check - Blue Instance
         run: |
@@ -149,7 +147,7 @@ jobs:
 
           for i in {1..10}; do
             echo "🔍 Health check attempt $i/10..."
-            if curl -f -s "${{ secrets.VPC1_ALB_URL }}/"; then
+            if curl -f -s "${{ secrets.VPC1_ALB_URL }}/" | grep -q "Empick\|Vue\|app"; then
               echo "✅ Blue instance health check passed!"
               break
             fi
@@ -162,19 +160,44 @@ jobs:
 
       - name: 🚀 Deploy to VPC1 Green Instance
         run: |
-          echo "🚀 Deploying to Green Instance..."
+          echo "🚀 Deploying Vue.js app to Green Instance..."
 
           # Green 인스턴스에도 동일한 배포
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_GREEN_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["bash -c \"$(cat << '\''SCRIPT'\''", "$(cat deploy.sh)", "SCRIPT", ")\""]' \
+            --parameters 'commands=[
+              "echo \"🔄 Starting Vue.js deployment...\"",
+              "sudo mkdir -p /var/www/backup",
+              "if [ -d \"/var/www/html\" ] && [ \"$(ls -A /var/www/html)\" ]; then sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || true; fi",
+              "sudo mkdir -p /tmp/vue-deploy",
+              "cd /tmp/vue-deploy",
+              "echo \"📥 Downloading build files from GitHub...\"",
+              "curl -L -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\"",
+              "tar -xzf frontend-build.tar.gz",
+              "cd be14-fin-Empick-FE-main",
+              "echo \"🏗️ Building Vue.js on server...\"",
+              "curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
+              "sudo yum install -y nodejs",
+              "npm ci --production=false",
+              "npm run build",
+              "echo \"📂 Deploying to web directory...\"",
+              "sudo rm -rf /var/www/html/*",
+              "sudo cp -r dist/* /var/www/html/",
+              "sudo chown -R nginx:nginx /var/www/html",
+              "sudo chmod -R 755 /var/www/html",
+              "echo \"🔧 Testing Nginx configuration...\"",
+              "sudo nginx -t",
+              "sudo systemctl reload nginx",
+              "echo \"✅ Vue.js deployment completed successfully!\"",
+              "cd / && sudo rm -rf /tmp/vue-deploy"
+            ]' \
             --output text
 
       - name: ⏰ Wait for Green Deployment
         run: |
           echo "⏰ Waiting for Green deployment to complete..."
-          sleep 45
+          sleep 120
 
       - name: 🧪 Health Check - Green Instance
         run: |
@@ -182,7 +205,7 @@ jobs:
 
           for i in {1..5}; do
             echo "🔍 Health check attempt $i/5..."
-            if curl -f -s "${{ secrets.VPC1_ALB_URL }}/"; then
+            if curl -f -s "${{ secrets.VPC1_ALB_URL }}/" | grep -q "Empick\|Vue\|app"; then
               echo "✅ Green instance health check passed!"
               break
             fi
@@ -194,9 +217,9 @@ jobs:
 
       - name: 🎉 Deployment Summary
         run: |
-          echo "🎉 Frontend Deployment Summary:"
+          echo "🎉 Vue.js Frontend Deployment Summary:"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ Build: SUCCESS"
+          echo "✅ Vue.js Build: SUCCESS"
           echo "✅ Blue Instance Deploy: SUCCESS"
           echo "✅ Green Instance Deploy: SUCCESS"
           echo "✅ Health Checks: SUCCESS"
@@ -209,10 +232,10 @@ jobs:
       - name: ❌ Deployment Failed
         if: failure()
         run: |
-          echo "❌ Frontend deployment failed!"
+          echo "❌ Vue.js deployment failed!"
           echo "🔧 Troubleshooting steps:"
           echo "1. Check AWS SSM Run Command status in AWS Console"
           echo "2. SSH to instances and check Nginx logs: sudo tail -f /var/log/nginx/error.log"
-          echo "3. Check VPC1 EC2 IAM roles for SSM access"
-          echo "4. Test Nginx configuration: sudo nginx -t"
+          echo "3. Check Node.js installation: node --version"
+          echo "4. Check build process: npm run build"
           echo "5. Check disk space: df -h"
