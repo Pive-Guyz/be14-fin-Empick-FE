@@ -82,57 +82,65 @@ jobs:
         run: |
           echo "🚀 Deploying Vue.js app to Blue Instance..."
 
-          # Base64로 빌드 파일 인코딩 (작은 청크로 분할)
-          BUILD_BASE64=$(base64 -w 0 frontend-build.tar.gz)
-
-          # 배포 스크립트 생성
-          cat > deploy.sh << 'EOF'
-          #!/bin/bash
-          set -e
-          echo "🔄 Starting Vue.js deployment..."
-
-          # 백업 생성
-          sudo mkdir -p /var/www/backup
-          if [ -d "/var/www/html" ] && [ "$(ls -A /var/www/html)" ]; then
-            sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
-          fi
-
-          # 임시 디렉터리 생성
-          sudo mkdir -p /tmp/vue-deploy
-          cd /tmp/vue-deploy
-
-          echo "✅ Vue.js deployment completed successfully!"
-          EOF
-
-          # SSM으로 배포 실행
+          # SSM으로 배포 실행 - 더 안전한 스크립트
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_BLUE_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
-              "echo \"🔄 Starting Vue.js deployment...\"",
+              "echo \"=== 🔄 Starting Vue.js deployment ===\"",
+              "echo \"Current time: $(date)\"",
+              "echo \"Current user: $(whoami)\"",
+              "echo \"Current directory: $(pwd)\"",
+              "echo \"=== 📂 Checking current web directory ===\"",
+              "ls -la /var/www/html/ || echo \"Directory not found\"",
+              "echo \"=== 💾 Creating backup ===\"",
               "sudo mkdir -p /var/www/backup",
-              "if [ -d \"/var/www/html\" ] && [ \"$(ls -A /var/www/html)\" ]; then sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || true; fi",
+              "if [ -d \"/var/www/html\" ] && [ \"$(ls -A /var/www/html)\" ]; then sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || echo \"Backup failed, continuing...\"; fi",
+              "echo \"=== 🗂️ Preparing deployment directory ===\"",
+              "sudo rm -rf /tmp/vue-deploy",
               "sudo mkdir -p /tmp/vue-deploy",
               "cd /tmp/vue-deploy",
-              "echo \"📥 Downloading build files from GitHub...\"",
+              "pwd",
+              "echo \"=== 📥 Downloading source from GitHub ===\"",
               "curl -L -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\"",
+              "ls -la frontend-build.tar.gz",
+              "echo \"=== 📦 Extracting source ===\"",
               "tar -xzf frontend-build.tar.gz",
+              "ls -la",
               "cd be14-fin-Empick-FE-main",
-              "echo \"🏗️ Building Vue.js on server...\"",
-              "curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
-              "sudo yum install -y nodejs",
+              "pwd",
+              "ls -la",
+              "echo \"=== 🔧 Node.js setup ===\"",
+              "node --version || (echo \"Installing Node.js...\" && curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash - && sudo yum install -y nodejs)",
+              "node --version",
+              "npm --version",
+              "echo \"=== 📦 Installing dependencies ===\"",
               "npm ci --production=false",
+              "echo \"=== 🏗️ Building Vue.js application ===\"",
               "npm run build",
-              "echo \"📂 Deploying to web directory...\"",
+              "echo \"=== 📊 Checking build output ===\"",
+              "ls -la dist/",
+              "du -sh dist/",
+              "head -5 dist/index.html",
+              "echo \"=== 🚀 Deploying to web directory ===\"",
               "sudo rm -rf /var/www/html/*",
               "sudo cp -r dist/* /var/www/html/",
+              "echo \"=== ✅ Verifying deployment ===\"",
+              "ls -la /var/www/html/",
+              "head -5 /var/www/html/index.html",
+              "echo \"=== 🔐 Setting permissions ===\"",
               "sudo chown -R nginx:nginx /var/www/html",
               "sudo chmod -R 755 /var/www/html",
-              "echo \"🔧 Testing Nginx configuration...\"",
+              "echo \"=== 🔧 Reloading Nginx ===\"",
               "sudo nginx -t",
               "sudo systemctl reload nginx",
-              "echo \"✅ Vue.js deployment completed successfully!\"",
-              "cd / && sudo rm -rf /tmp/vue-deploy"
+              "sudo systemctl status nginx --no-pager",
+              "echo \"=== 🧹 Cleanup ===\"",
+              "cd / && sudo rm -rf /tmp/vue-deploy",
+              "echo \"=== ✅ Deployment completed successfully! ===\"",
+              "echo \"Final verification:\"",
+              "ls -la /var/www/html/",
+              "curl -s localhost | head -5 || echo \"Local curl failed\""
             ]' \
             --output text
 
@@ -162,35 +170,65 @@ jobs:
         run: |
           echo "🚀 Deploying Vue.js app to Green Instance..."
 
-          # Green 인스턴스에도 동일한 배포
+          # Green 인스턴스에도 동일한 배포 - 더 안전한 스크립트
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_GREEN_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
-              "echo \"🔄 Starting Vue.js deployment...\"",
+              "echo \"=== 🔄 Starting Vue.js deployment (GREEN) ===\"",
+              "echo \"Current time: $(date)\"",
+              "echo \"Current user: $(whoami)\"",
+              "echo \"Current directory: $(pwd)\"",
+              "echo \"=== 📂 Checking current web directory ===\"",
+              "ls -la /var/www/html/ || echo \"Directory not found\"",
+              "echo \"=== 💾 Creating backup ===\"",
               "sudo mkdir -p /var/www/backup",
-              "if [ -d \"/var/www/html\" ] && [ \"$(ls -A /var/www/html)\" ]; then sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || true; fi",
+              "if [ -d \"/var/www/html\" ] && [ \"$(ls -A /var/www/html)\" ]; then sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || echo \"Backup failed, continuing...\"; fi",
+              "echo \"=== 🗂️ Preparing deployment directory ===\"",
+              "sudo rm -rf /tmp/vue-deploy",
               "sudo mkdir -p /tmp/vue-deploy",
               "cd /tmp/vue-deploy",
-              "echo \"📥 Downloading build files from GitHub...\"",
+              "pwd",
+              "echo \"=== 📥 Downloading source from GitHub ===\"",
               "curl -L -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\"",
+              "ls -la frontend-build.tar.gz",
+              "echo \"=== 📦 Extracting source ===\"",
               "tar -xzf frontend-build.tar.gz",
+              "ls -la",
               "cd be14-fin-Empick-FE-main",
-              "echo \"🏗️ Building Vue.js on server...\"",
-              "curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
-              "sudo yum install -y nodejs",
+              "pwd",
+              "ls -la",
+              "echo \"=== 🔧 Node.js setup ===\"",
+              "node --version || (echo \"Installing Node.js...\" && curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash - && sudo yum install -y nodejs)",
+              "node --version",
+              "npm --version",
+              "echo \"=== 📦 Installing dependencies ===\"",
               "npm ci --production=false",
+              "echo \"=== 🏗️ Building Vue.js application ===\"",
               "npm run build",
-              "echo \"📂 Deploying to web directory...\"",
+              "echo \"=== 📊 Checking build output ===\"",
+              "ls -la dist/",
+              "du -sh dist/",
+              "head -5 dist/index.html",
+              "echo \"=== 🚀 Deploying to web directory ===\"",
               "sudo rm -rf /var/www/html/*",
               "sudo cp -r dist/* /var/www/html/",
+              "echo \"=== ✅ Verifying deployment ===\"",
+              "ls -la /var/www/html/",
+              "head -5 /var/www/html/index.html",
+              "echo \"=== 🔐 Setting permissions ===\"",
               "sudo chown -R nginx:nginx /var/www/html",
               "sudo chmod -R 755 /var/www/html",
-              "echo \"🔧 Testing Nginx configuration...\"",
+              "echo \"=== 🔧 Reloading Nginx ===\"",
               "sudo nginx -t",
               "sudo systemctl reload nginx",
-              "echo \"✅ Vue.js deployment completed successfully!\"",
-              "cd / && sudo rm -rf /tmp/vue-deploy"
+              "sudo systemctl status nginx --no-pager",
+              "echo \"=== 🧹 Cleanup ===\"",
+              "cd / && sudo rm -rf /tmp/vue-deploy",
+              "echo \"=== ✅ Deployment completed successfully! ===\"",
+              "echo \"Final verification:\"",
+              "ls -la /var/www/html/",
+              "curl -s localhost | head -5 || echo \"Local curl failed\""
             ]' \
             --output text
 
