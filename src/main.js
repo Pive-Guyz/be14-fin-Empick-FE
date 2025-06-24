@@ -45,4 +45,4 @@ app.use(pinia)
 app.use(router)
 app.use(vuetify)
 app.use(Toast, toastOptions)
-app.mount('#app')
+app.mount('#app')// Force deployment trigger
