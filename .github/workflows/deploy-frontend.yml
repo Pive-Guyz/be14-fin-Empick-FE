@@ -4,7 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - "empick-frontend/**"
+      - "src/**"
+      - "public/**"
+      - "package*.json"
+      - "vite.config.js"
       - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
@@ -24,11 +27,9 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: ./
         run: npm ci
 
       - name: Create production environment file
-        working-directory: ./
         run: |
           cat > .env.production << EOF
           VITE_API_BASE_URL=/api
@@ -37,11 +38,9 @@ jobs:
           EOF
 
       - name: Build application
-        working-directory: ./
         run: npm run build
 
       - name: Create deployment package
-        working-directory: ./
         run: |
           tar -czf frontend-build.tar.gz -C dist .
           ls -la frontend-build.tar.gz
