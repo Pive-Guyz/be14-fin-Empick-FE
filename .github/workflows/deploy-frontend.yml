@@ -71,29 +71,67 @@ jobs:
           echo "📁 Build file: s3://${{ secrets.S3_BUCKET_NAME }}/frontend-builds/latest.tar.gz"
           echo "🚀 Deploy trigger: s3://${{ secrets.S3_BUCKET_NAME }}/frontend-builds/deploy-trigger.json"
 
-          # EC2 인스턴스들이 자동으로 배포할 시간을 기다림 (5분)
-          echo "⏳ Waiting 5 minutes for auto-deployment to complete..."
-          sleep 300
+          # 1분 대기 후 반복 확인 방식으로 변경
+          echo "⏳ Initial wait: 1 minute for EC2 cron detection..."
+          sleep 60
+
+          # S3 트리거 파일 변경 감지 및 배포 상태 확인
+          DEPLOY_TRIGGER_KEY="frontend-builds/deploy-trigger.json"
+          INITIAL_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+          echo "🔍 Monitoring deployment progress..."
+          for i in {1..8}; do
+            echo "📊 Check attempt $i/8..."
+            
+            # S3에서 현재 트리거 파일 내용 확인
+            if aws s3 cp "s3://${{ secrets.S3_BUCKET_NAME }}/${DEPLOY_TRIGGER_KEY}" current-trigger.json 2>/dev/null; then
+              CURRENT_TIMESTAMP=$(cat current-trigger.json | grep -o '"timestamp":"[^"]*"' | cut -d'"' -f4)
+              echo "📅 Current trigger timestamp: ${CURRENT_TIMESTAMP}"
+              
+              # ALB Health Check로 배포 완료 확인
+              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.VPC1_ALB_DNS_NAME }}" || echo "000")
+              echo "🏥 Health check: HTTP $HTTP_STATUS"
+              
+              if [ "$HTTP_STATUS" = "200" ]; then
+                echo "✅ Deployment appears to be active, proceeding to verification..."
+                break
+              fi
+            else
+              echo "⚠️ Could not fetch trigger file from S3"
+            fi
+            
+            echo "⏳ Waiting 30 seconds before next check..."
+            sleep 30
+          done
+
+          echo "🎯 Auto-deployment monitoring completed"
 
       - name: Verify deployment
         run: |
-          echo "🔍 Verifying deployment..."
+          echo "🔍 Final deployment verification..."
 
           # ALB 엔드포인트 확인
           ALB_DNS="${{ secrets.VPC1_ALB_DNS_NAME }}"
 
-          # Health check
-          for i in {1..10}; do
+          # Health check (재시도 간격 단축)
+          for i in {1..6}; do
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$ALB_DNS" || echo "000")
-            echo "Health check attempt $i/10: HTTP $HTTP_STATUS"
+            echo "🏥 Final verification attempt $i/6: HTTP $HTTP_STATUS"
             
             if [ "$HTTP_STATUS" = "200" ]; then
-              echo "✅ Deployment verification successful"
+              echo "✅ Deployment verification successful!"
+              echo "🌐 Frontend URL: http://$ALB_DNS"
+              echo "🎉 Deployment completed successfully"
               exit 0
             fi
             
-            sleep 10
+            if [ $i -lt 6 ]; then
+              echo "⏳ Waiting 15 seconds before retry..."
+              sleep 15
+            fi
           done
 
-          echo "⚠️ Deployment verification failed - check ALB and instances"
+          echo "❌ Deployment verification failed after 6 attempts"
+          echo "🔧 Please check ALB and EC2 instances manually"
+          echo "🌐 ALB URL: http://$ALB_DNS"
           exit 1
