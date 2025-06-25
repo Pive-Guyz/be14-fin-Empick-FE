@@ -1,4 +1,4 @@
-name: Deploy Frontend Compatible (No S3)
+name: Deploy Frontend to Amazon Linux 2023
 
 on:
   push:
@@ -74,120 +74,215 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: 🚀 Deploy to Blue Instance
+      - name: 🔍 Check Instance Status
         run: |
-          echo "🚀 Deploying to Blue Instance..."
+          echo "🔍 Checking instance status before deployment..."
 
-          # User Data deploy.sh와 호환되는 방식 - 에러 처리 강화
+          # Blue Instance 상태 확인
+          BLUE_STATE=$(aws ec2 describe-instances \
+            --instance-ids ${{ secrets.VPC1_BLUE_INSTANCE_ID }} \
+            --query 'Reservations[0].Instances[0].State.Name' \
+            --output text)
+          echo "Blue Instance State: $BLUE_STATE"
+
+          # Green Instance 상태 확인
+          GREEN_STATE=$(aws ec2 describe-instances \
+            --instance-ids ${{ secrets.VPC1_GREEN_INSTANCE_ID }} \
+            --query 'Reservations[0].Instances[0].State.Name' \
+            --output text)
+          echo "Green Instance State: $GREEN_STATE"
+
+          # SSM Agent 상태 확인
+          echo "🔍 Checking SSM Agent status..."
+          aws ssm describe-instance-information \
+            --filters "Key=InstanceIds,Values=${{ secrets.VPC1_BLUE_INSTANCE_ID }},${{ secrets.VPC1_GREEN_INSTANCE_ID }}" \
+            --query 'InstanceInformationList[*].[InstanceId,PingStatus,LastPingDateTime]' \
+            --output table || echo "⚠️ SSM status check failed"
+
+      - name: 🚀 Deploy to Blue Instance (Amazon Linux 2023)
+        run: |
+          echo "🚀 Deploying to Blue Instance (Amazon Linux 2023)..."
+
+          # Amazon Linux 2023 최적화된 배포 스크립트
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_BLUE_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
+              "#!/bin/bash",
               "set -euo pipefail",
-              "echo \"=== 🔄 Starting Vue.js deployment (BLUE) ===\"",
+              "echo \"=== 🔄 Starting Vue.js deployment (BLUE - Amazon Linux 2023) ===\"",
               "echo \"Build time: $(date)\"",
               "echo \"Current user: $(whoami)\"",
+              "echo \"OS Info: $(cat /etc/os-release | grep PRETTY_NAME)\"",
+              "",
+              "# 시스템 정보 확인",
+              "echo \"=== 📋 System Information ===\"",
+              "echo \"Kernel: $(uname -r)\"",
+              "echo \"Architecture: $(uname -m)\"",
+              "free -h",
+              "df -h",
+              "",
               "echo \"=== 📁 Preparing deployment directory ===\"",
               "sudo mkdir -p /tmp/vue-build",
               "sudo rm -rf /tmp/vue-build/*",
+              "",
               "echo \"=== 📥 Downloading source from GitHub ===\"",
               "cd /tmp",
               "curl -L -f --retry 3 --retry-delay 5 -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\" || { echo \"❌ Failed to download from GitHub\"; exit 1; }",
               "ls -la frontend-build.tar.gz",
+              "",
               "echo \"=== 📦 Extracting source ===\"",
               "tar -xzf frontend-build.tar.gz || { echo \"❌ Failed to extract archive\"; exit 1; }",
               "ls -la",
               "cd be14-fin-Empick-FE-main || { echo \"❌ Source directory not found\"; exit 1; }",
               "pwd && ls -la",
-              "echo \"=== 🔧 Node.js setup ===\"",
+              "",
+              "echo \"=== 🔧 Node.js setup (Amazon Linux 2023) ===\"",
               "if ! command -v node &> /dev/null; then",
-              "  echo \"Installing Node.js 18...\"",
+              "  echo \"Installing Node.js 18 for Amazon Linux 2023...\"",
+              "  # Amazon Linux 2023용 Node.js 설치",
               "  curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
               "  sudo dnf install -y --allowerasing nodejs || { echo \"❌ Failed to install Node.js\"; exit 1; }",
+              "else",
+              "  echo \"Node.js already installed\"",
               "fi",
               "node --version && npm --version",
+              "",
               "echo \"=== 📦 Installing dependencies ===\"",
+              "# npm cache 정리",
+              "npm cache clean --force",
               "npm ci --production=false || { echo \"❌ Failed to install dependencies\"; exit 1; }",
+              "",
               "echo \"=== 🏗️ Building Vue.js application ===\"",
               "npm run build || { echo \"❌ Failed to build Vue.js app\"; exit 1; }",
+              "",
               "echo \"Build verification:\"",
               "ls -la dist/ && du -sh dist/",
               "test -f dist/index.html || { echo \"❌ index.html not found in build\"; exit 1; }",
+              "",
               "echo \"=== 📂 Preparing for deployment ===\"",
               "sudo rm -rf /tmp/vue-build/*",
               "sudo cp -r dist/* /tmp/vue-build/ || { echo \"❌ Failed to copy build files\"; exit 1; }",
               "echo \"Deployment directory contents:\"",
               "ls -la /tmp/vue-build/",
+              "",
               "echo \"=== 🚀 Running deployment script ===\"",
               "test -f /home/ec2-user/deploy.sh || { echo \"❌ deploy.sh not found\"; exit 1; }",
               "sudo /home/ec2-user/deploy.sh || { echo \"❌ Deployment script failed\"; exit 1; }",
+              "",
               "echo \"=== ✅ Blue deployment completed! ===\"",
               "ls -la /var/www/html/ | head -5",
+              "curl -s localhost/health || echo \"⚠️ Health check failed\"",
               "curl -s localhost | head -3 || echo \"⚠️ Local curl test failed\"",
+              "",
               "echo \"=== 🧹 Cleanup ===\"",
-              "cd / && sudo rm -rf /tmp/be14-fin-Empick-FE-main /tmp/frontend-build.tar.gz"
+              "cd / && sudo rm -rf /tmp/be14-fin-Empick-FE-main /tmp/frontend-build.tar.gz",
+              "",
+              "echo \"=== 🎉 Deployment Summary ===\"",
+              "echo \"Nginx Status: $(sudo systemctl is-active nginx)\"",
+              "echo \"SSM Agent Status: $(sudo systemctl is-active amazon-ssm-agent)\"",
+              "echo \"Deployment completed at: $(date)\""
             ]' \
-            --output text
+            --timeout-seconds 1800 \
+            --output text \
+            --comment "Blue Instance Deployment (Amazon Linux 2023)"
 
       - name: ⏰ Wait for Blue deployment
-        run: sleep 120
-
-      - name: 🚀 Deploy to Green Instance
         run: |
-          echo "🚀 Deploying to Green Instance..."
+          echo "⏰ Waiting for Blue deployment to complete..."
+          sleep 180
+
+      - name: 🚀 Deploy to Green Instance (Amazon Linux 2023)
+        run: |
+          echo "🚀 Deploying to Green Instance (Amazon Linux 2023)..."
 
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_GREEN_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=[
+              "#!/bin/bash",
               "set -euo pipefail",
-              "echo \"=== 🔄 Starting Vue.js deployment (GREEN) ===\"",
+              "echo \"=== 🔄 Starting Vue.js deployment (GREEN - Amazon Linux 2023) ===\"",
               "echo \"Build time: $(date)\"",
               "echo \"Current user: $(whoami)\"",
+              "echo \"OS Info: $(cat /etc/os-release | grep PRETTY_NAME)\"",
+              "",
+              "# 시스템 정보 확인",
+              "echo \"=== 📋 System Information ===\"",
+              "echo \"Kernel: $(uname -r)\"",
+              "echo \"Architecture: $(uname -m)\"",
+              "free -h",
+              "df -h",
+              "",
               "echo \"=== 📁 Preparing deployment directory ===\"",
               "sudo mkdir -p /tmp/vue-build",
               "sudo rm -rf /tmp/vue-build/*",
+              "",
               "echo \"=== 📥 Downloading source from GitHub ===\"",
               "cd /tmp",
               "curl -L -f --retry 3 --retry-delay 5 -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\" || { echo \"❌ Failed to download from GitHub\"; exit 1; }",
               "ls -la frontend-build.tar.gz",
+              "",
               "echo \"=== 📦 Extracting source ===\"",
               "tar -xzf frontend-build.tar.gz || { echo \"❌ Failed to extract archive\"; exit 1; }",
               "ls -la",
               "cd be14-fin-Empick-FE-main || { echo \"❌ Source directory not found\"; exit 1; }",
               "pwd && ls -la",
-              "echo \"=== 🔧 Node.js setup ===\"",
+              "",
+              "echo \"=== 🔧 Node.js setup (Amazon Linux 2023) ===\"",
               "if ! command -v node &> /dev/null; then",
-              "  echo \"Installing Node.js 18...\"",
+              "  echo \"Installing Node.js 18 for Amazon Linux 2023...\"",
+              "  # Amazon Linux 2023용 Node.js 설치",
               "  curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
               "  sudo dnf install -y --allowerasing nodejs || { echo \"❌ Failed to install Node.js\"; exit 1; }",
+              "else",
+              "  echo \"Node.js already installed\"",
               "fi",
               "node --version && npm --version",
+              "",
               "echo \"=== 📦 Installing dependencies ===\"",
+              "# npm cache 정리",
+              "npm cache clean --force",
               "npm ci --production=false || { echo \"❌ Failed to install dependencies\"; exit 1; }",
+              "",
               "echo \"=== 🏗️ Building Vue.js application ===\"",
               "npm run build || { echo \"❌ Failed to build Vue.js app\"; exit 1; }",
+              "",
               "echo \"Build verification:\"",
               "ls -la dist/ && du -sh dist/",
               "test -f dist/index.html || { echo \"❌ index.html not found in build\"; exit 1; }",
+              "",
               "echo \"=== 📂 Preparing for deployment ===\"",
               "sudo rm -rf /tmp/vue-build/*",
               "sudo cp -r dist/* /tmp/vue-build/ || { echo \"❌ Failed to copy build files\"; exit 1; }",
               "echo \"Deployment directory contents:\"",
               "ls -la /tmp/vue-build/",
+              "",
               "echo \"=== 🚀 Running deployment script ===\"",
               "test -f /home/ec2-user/deploy.sh || { echo \"❌ deploy.sh not found\"; exit 1; }",
               "sudo /home/ec2-user/deploy.sh || { echo \"❌ Deployment script failed\"; exit 1; }",
+              "",
               "echo \"=== ✅ Green deployment completed! ===\"",
               "ls -la /var/www/html/ | head -5",
+              "curl -s localhost/health || echo \"⚠️ Health check failed\"",
               "curl -s localhost | head -3 || echo \"⚠️ Local curl test failed\"",
+              "",
               "echo \"=== 🧹 Cleanup ===\"",
-              "cd / && sudo rm -rf /tmp/be14-fin-Empick-FE-main /tmp/frontend-build.tar.gz"
+              "cd / && sudo rm -rf /tmp/be14-fin-Empick-FE-main /tmp/frontend-build.tar.gz",
+              "",
+              "echo \"=== 🎉 Deployment Summary ===\"",
+              "echo \"Nginx Status: $(sudo systemctl is-active nginx)\"",
+              "echo \"SSM Agent Status: $(sudo systemctl is-active amazon-ssm-agent)\"",
+              "echo \"Deployment completed at: $(date)\""
             ]' \
-            --output text
+            --timeout-seconds 1800 \
+            --output text \
+            --comment "Green Instance Deployment (Amazon Linux 2023)"
 
       - name: ⏰ Wait for Green deployment
-        run: sleep 120
+        run: |
+          echo "⏰ Waiting for Green deployment to complete..."
+          sleep 180
 
       - name: 🧪 Final Health Check
         run: |
@@ -196,40 +291,65 @@ jobs:
 
           for i in {1..10}; do
             echo "🔍 Attempt $i/10..."
-            if curl -f -s "$ALB_URL/" | grep -q "Vite\|Vue\|app"; then
-              echo "✅ Health check passed!"
+            
+            # Health endpoint 체크
+            if curl -f -s "$ALB_URL/health" | grep -q "healthy"; then
+              echo "✅ Health check endpoint OK!"
+            else
+              echo "⚠️ Health check endpoint failed"
+            fi
+            
+            # 메인 페이지 체크
+            if curl -f -s "$ALB_URL/" | grep -q -E "(Vite|Vue|app|Empick)"; then
+              echo "✅ Main page check passed!"
               echo "🌐 Website: $ALB_URL"
               break
             fi
+            
             if [ $i -eq 10 ]; then
-              echo "❌ Health check failed"
-              curl -s "$ALB_URL/" | head -5
+              echo "❌ Final health check failed"
+              echo "Response from ALB:"
+              curl -s "$ALB_URL/" | head -10
               exit 1
             fi
-            sleep 15
+            sleep 20
           done
 
       - name: 📊 Deployment Summary
         run: |
-          echo "🎉 Deployment completed successfully!"
+          echo "🎉 Amazon Linux 2023 기반 배포가 성공적으로 완료되었습니다!"
           echo "🌐 Frontend URL: ${{ secrets.VPC1_ALB_URL }}"
-          echo "⏱️ Total time: Compatible with existing infrastructure!"
+          echo "🔧 OS: Amazon Linux 2023"
+          echo "📦 Package Manager: dnf"
+          echo "🚀 Web Server: Nginx"
+          echo "⏱️ Total deployment time: Optimized for AL2023!"
 
       - name: ❌ Deployment Failed
         if: failure()
         run: |
-          echo "❌ Vue.js deployment failed!"
-          echo "🔧 Troubleshooting steps:"
-          echo "1. Check AWS SSM Run Command status in AWS Console"
-          echo "2. SSH to instances and check logs:"
+          echo "❌ Amazon Linux 2023 기반 Vue.js 배포가 실패했습니다!"
+          echo ""
+          echo "🔧 문제 해결 단계:"
+          echo "1. AWS SSM Run Command 상태를 AWS Console에서 확인"
+          echo "2. 인스턴스 상태 확인:"
+          echo "   aws ec2 describe-instances --instance-ids ${{ secrets.VPC1_BLUE_INSTANCE_ID }} ${{ secrets.VPC1_GREEN_INSTANCE_ID }}"
+          echo "3. SSM Agent 상태 확인:"
+          echo "   aws ssm describe-instance-information --filters \"Key=InstanceIds,Values=${{ secrets.VPC1_BLUE_INSTANCE_ID }},${{ secrets.VPC1_GREEN_INSTANCE_ID }}\""
+          echo "4. SSM으로 인스턴스 접속하여 로그 확인:"
+          echo "   aws ssm start-session --target ${{ secrets.VPC1_BLUE_INSTANCE_ID }}"
+          echo "5. 로그 파일 확인:"
           echo "   - Nginx error log: sudo tail -f /var/log/nginx/error.log"
           echo "   - Nginx access log: sudo tail -f /var/log/nginx/access.log"
           echo "   - System log: sudo journalctl -u nginx -f"
-          echo "3. Check Node.js installation: node --version && npm --version"
-          echo "4. Check build process manually:"
-          echo "   - cd /tmp && git clone https://github.com/Pive-Guyz/be14-fin-Empick-FE.git"
-          echo "   - cd be14-fin-Empick-FE && npm ci && npm run build"
-          echo "5. Check disk space: df -h"
-          echo "6. Check deployment script: cat /home/ec2-user/deploy.sh"
-          echo "7. Test Nginx configuration: sudo nginx -t"
-          echo "8. Check web directory: ls -la /var/www/html/"
+          echo "   - User Data log: sudo tail -f /var/log/user-data.log"
+          echo "6. Amazon Linux 2023 패키지 확인:"
+          echo "   - Node.js: node --version && npm --version"
+          echo "   - DNF: dnf --version"
+          echo "   - OS: cat /etc/os-release"
+          echo "7. 수동 빌드 테스트:"
+          echo "   - cd /tmp && curl -L https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz | tar -xz"
+          echo "   - cd be14-fin-Empick-FE-main && npm ci && npm run build"
+          echo "8. 디스크 공간 확인: df -h"
+          echo "9. 배포 스크립트 확인: cat /home/ec2-user/deploy.sh"
+          echo "10. Nginx 설정 테스트: sudo nginx -t"
+          echo "11. 웹 디렉토리 확인: ls -la /var/www/html/"
