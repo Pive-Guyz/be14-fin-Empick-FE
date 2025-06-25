@@ -1,4 +1,4 @@
-name: Deploy Frontend Simple (No S3)
+name: Deploy Frontend Compatible (No S3)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - "public/**"
       - "package.json"
       - "vite.config.js"
-      - ".github/workflows/deploy-frontend.yml"
+      - "empick-frontend/.github/workflows/deploy-frontend.yml"
   workflow_dispatch: # 수동 실행 가능
 
 env:
@@ -78,70 +78,116 @@ jobs:
         run: |
           echo "🚀 Deploying to Blue Instance..."
 
-          # 빌드 파일을 Base64로 인코딩해서 SSM으로 전송
-          BUILD_B64=$(base64 -w 0 frontend-build.tar.gz)
-
+          # User Data deploy.sh와 호환되는 방식 - 에러 처리 강화
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_BLUE_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=[
-              \"echo '=== 🔄 Starting Vue.js deployment (BLUE) ==='\",
-              \"echo 'Build time: $(date)'\",
-              \"sudo mkdir -p /var/www/backup\",
-              \"if [ -d '/var/www/html' ] && [ '\$(ls -A /var/www/html)' ]; then sudo cp -r /var/www/html /var/www/backup/backup_\$(date +%Y%m%d_%H%M%S); fi\",
-              \"echo '=== 📥 Receiving build file ==='\",
-              \"echo '$BUILD_B64' | base64 -d > /tmp/frontend-build.tar.gz\",
-              \"ls -la /tmp/frontend-build.tar.gz\",
-              \"echo '=== 🚀 Deploying files ==='\",
-              \"sudo rm -rf /var/www/html/*\",
-              \"sudo tar -xzf /tmp/frontend-build.tar.gz -C /var/www/html/\",
-              \"sudo chown -R nginx:nginx /var/www/html\",
-              \"sudo chmod -R 755 /var/www/html\",
-              \"echo '=== 🔧 Reloading Nginx ==='\",
-              \"sudo nginx -t && sudo systemctl reload nginx\",
-              \"echo '=== ✅ Blue deployment completed! ==='\",
-              \"ls -la /var/www/html/ | head -5\",
-              \"curl -s localhost | head -3 || echo 'Local test failed'\",
-              \"rm -f /tmp/frontend-build.tar.gz\"
-            ]" \
+            --parameters 'commands=[
+              "set -euo pipefail",
+              "echo \"=== 🔄 Starting Vue.js deployment (BLUE) ===\"",
+              "echo \"Build time: $(date)\"",
+              "echo \"Current user: $(whoami)\"",
+              "echo \"=== 📁 Preparing deployment directory ===\"",
+              "sudo mkdir -p /tmp/vue-build",
+              "sudo rm -rf /tmp/vue-build/*",
+              "echo \"=== 📥 Downloading source from GitHub ===\"",
+              "cd /tmp",
+              "curl -L -f --retry 3 --retry-delay 5 -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\" || { echo \"❌ Failed to download from GitHub\"; exit 1; }",
+              "ls -la frontend-build.tar.gz",
+              "echo \"=== 📦 Extracting source ===\"",
+              "tar -xzf frontend-build.tar.gz || { echo \"❌ Failed to extract archive\"; exit 1; }",
+              "ls -la",
+              "cd be14-fin-Empick-FE-main || { echo \"❌ Source directory not found\"; exit 1; }",
+              "pwd && ls -la",
+              "echo \"=== 🔧 Node.js setup ===\"",
+              "if ! command -v node &> /dev/null; then",
+              "  echo \"Installing Node.js 18...\"",
+              "  curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
+              "  sudo dnf install -y --allowerasing nodejs || { echo \"❌ Failed to install Node.js\"; exit 1; }",
+              "fi",
+              "node --version && npm --version",
+              "echo \"=== 📦 Installing dependencies ===\"",
+              "npm ci --production=false || { echo \"❌ Failed to install dependencies\"; exit 1; }",
+              "echo \"=== 🏗️ Building Vue.js application ===\"",
+              "npm run build || { echo \"❌ Failed to build Vue.js app\"; exit 1; }",
+              "echo \"Build verification:\"",
+              "ls -la dist/ && du -sh dist/",
+              "test -f dist/index.html || { echo \"❌ index.html not found in build\"; exit 1; }",
+              "echo \"=== 📂 Preparing for deployment ===\"",
+              "sudo rm -rf /tmp/vue-build/*",
+              "sudo cp -r dist/* /tmp/vue-build/ || { echo \"❌ Failed to copy build files\"; exit 1; }",
+              "echo \"Deployment directory contents:\"",
+              "ls -la /tmp/vue-build/",
+              "echo \"=== 🚀 Running deployment script ===\"",
+              "test -f /home/ec2-user/deploy.sh || { echo \"❌ deploy.sh not found\"; exit 1; }",
+              "sudo /home/ec2-user/deploy.sh || { echo \"❌ Deployment script failed\"; exit 1; }",
+              "echo \"=== ✅ Blue deployment completed! ===\"",
+              "ls -la /var/www/html/ | head -5",
+              "curl -s localhost | head -3 || echo \"⚠️ Local curl test failed\"",
+              "echo \"=== 🧹 Cleanup ===\"",
+              "cd / && sudo rm -rf /tmp/be14-fin-Empick-FE-main /tmp/frontend-build.tar.gz"
+            ]' \
             --output text
 
       - name: ⏰ Wait for Blue deployment
-        run: sleep 60
+        run: sleep 120
 
       - name: 🚀 Deploy to Green Instance
         run: |
           echo "🚀 Deploying to Green Instance..."
 
-          BUILD_B64=$(base64 -w 0 frontend-build.tar.gz)
-
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_GREEN_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
-            --parameters "commands=[
-              \"echo '=== 🔄 Starting Vue.js deployment (GREEN) ==='\",
-              \"echo 'Build time: $(date)'\",
-              \"sudo mkdir -p /var/www/backup\",
-              \"if [ -d '/var/www/html' ] && [ '\$(ls -A /var/www/html)' ]; then sudo cp -r /var/www/html /var/www/backup/backup_\$(date +%Y%m%d_%H%M%S); fi\",
-              \"echo '=== 📥 Receiving build file ==='\",
-              \"echo '$BUILD_B64' | base64 -d > /tmp/frontend-build.tar.gz\",
-              \"ls -la /tmp/frontend-build.tar.gz\",
-              \"echo '=== 🚀 Deploying files ==='\",
-              \"sudo rm -rf /var/www/html/*\",
-              \"sudo tar -xzf /tmp/frontend-build.tar.gz -C /var/www/html/\",
-              \"sudo chown -R nginx:nginx /var/www/html\",
-              \"sudo chmod -R 755 /var/www/html\",
-              \"echo '=== 🔧 Reloading Nginx ==='\",
-              \"sudo nginx -t && sudo systemctl reload nginx\",
-              \"echo '=== ✅ Green deployment completed! ==='\",
-              \"ls -la /var/www/html/ | head -5\",
-              \"curl -s localhost | head -3 || echo 'Local test failed'\",
-              \"rm -f /tmp/frontend-build.tar.gz\"
-            ]" \
+            --parameters 'commands=[
+              "set -euo pipefail",
+              "echo \"=== 🔄 Starting Vue.js deployment (GREEN) ===\"",
+              "echo \"Build time: $(date)\"",
+              "echo \"Current user: $(whoami)\"",
+              "echo \"=== 📁 Preparing deployment directory ===\"",
+              "sudo mkdir -p /tmp/vue-build",
+              "sudo rm -rf /tmp/vue-build/*",
+              "echo \"=== 📥 Downloading source from GitHub ===\"",
+              "cd /tmp",
+              "curl -L -f --retry 3 --retry-delay 5 -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\" || { echo \"❌ Failed to download from GitHub\"; exit 1; }",
+              "ls -la frontend-build.tar.gz",
+              "echo \"=== 📦 Extracting source ===\"",
+              "tar -xzf frontend-build.tar.gz || { echo \"❌ Failed to extract archive\"; exit 1; }",
+              "ls -la",
+              "cd be14-fin-Empick-FE-main || { echo \"❌ Source directory not found\"; exit 1; }",
+              "pwd && ls -la",
+              "echo \"=== 🔧 Node.js setup ===\"",
+              "if ! command -v node &> /dev/null; then",
+              "  echo \"Installing Node.js 18...\"",
+              "  curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -",
+              "  sudo dnf install -y --allowerasing nodejs || { echo \"❌ Failed to install Node.js\"; exit 1; }",
+              "fi",
+              "node --version && npm --version",
+              "echo \"=== 📦 Installing dependencies ===\"",
+              "npm ci --production=false || { echo \"❌ Failed to install dependencies\"; exit 1; }",
+              "echo \"=== 🏗️ Building Vue.js application ===\"",
+              "npm run build || { echo \"❌ Failed to build Vue.js app\"; exit 1; }",
+              "echo \"Build verification:\"",
+              "ls -la dist/ && du -sh dist/",
+              "test -f dist/index.html || { echo \"❌ index.html not found in build\"; exit 1; }",
+              "echo \"=== 📂 Preparing for deployment ===\"",
+              "sudo rm -rf /tmp/vue-build/*",
+              "sudo cp -r dist/* /tmp/vue-build/ || { echo \"❌ Failed to copy build files\"; exit 1; }",
+              "echo \"Deployment directory contents:\"",
+              "ls -la /tmp/vue-build/",
+              "echo \"=== 🚀 Running deployment script ===\"",
+              "test -f /home/ec2-user/deploy.sh || { echo \"❌ deploy.sh not found\"; exit 1; }",
+              "sudo /home/ec2-user/deploy.sh || { echo \"❌ Deployment script failed\"; exit 1; }",
+              "echo \"=== ✅ Green deployment completed! ===\"",
+              "ls -la /var/www/html/ | head -5",
+              "curl -s localhost | head -3 || echo \"⚠️ Local curl test failed\"",
+              "echo \"=== 🧹 Cleanup ===\"",
+              "cd / && sudo rm -rf /tmp/be14-fin-Empick-FE-main /tmp/frontend-build.tar.gz"
+            ]' \
             --output text
 
       - name: ⏰ Wait for Green deployment
-        run: sleep 60
+        run: sleep 120
 
       - name: 🧪 Final Health Check
         run: |
@@ -167,4 +213,23 @@ jobs:
         run: |
           echo "🎉 Deployment completed successfully!"
           echo "🌐 Frontend URL: ${{ secrets.VPC1_ALB_URL }}"
-          echo "⏱️ Total time: Much faster than before!"
+          echo "⏱️ Total time: Compatible with existing infrastructure!"
+
+      - name: ❌ Deployment Failed
+        if: failure()
+        run: |
+          echo "❌ Vue.js deployment failed!"
+          echo "🔧 Troubleshooting steps:"
+          echo "1. Check AWS SSM Run Command status in AWS Console"
+          echo "2. SSH to instances and check logs:"
+          echo "   - Nginx error log: sudo tail -f /var/log/nginx/error.log"
+          echo "   - Nginx access log: sudo tail -f /var/log/nginx/access.log"
+          echo "   - System log: sudo journalctl -u nginx -f"
+          echo "3. Check Node.js installation: node --version && npm --version"
+          echo "4. Check build process manually:"
+          echo "   - cd /tmp && git clone https://github.com/Pive-Guyz/be14-fin-Empick-FE.git"
+          echo "   - cd be14-fin-Empick-FE && npm ci && npm run build"
+          echo "5. Check disk space: df -h"
+          echo "6. Check deployment script: cat /home/ec2-user/deploy.sh"
+          echo "7. Test Nginx configuration: sudo nginx -t"
+          echo "8. Check web directory: ls -la /var/www/html/"
