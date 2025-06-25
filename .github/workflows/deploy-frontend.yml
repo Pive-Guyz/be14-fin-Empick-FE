@@ -8,7 +8,7 @@ on:
       - "public/**"
       - "package.json"
       - "vite.config.js"
-      - "empick-frontend/.github/workflows/deploy-frontend.yml"
+      - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch: # 수동 실행 가능
 
 env:
