@@ -53,6 +53,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-northeast-2
 
+      - name: Upload build to S3
+        run: |
+          # S3 버킷에 빌드 파일 업로드
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          S3_KEY="frontend-builds/frontend-build-${TIMESTAMP}.tar.gz"
+
+          aws s3 cp frontend-build.tar.gz "s3://${{ secrets.S3_BUCKET_NAME }}/${S3_KEY}"
+
+          # S3 키를 환경 파일에 저장 (다음 스텝에서 사용)
+          echo "S3_BUILD_KEY=${S3_KEY}" >> $GITHUB_ENV
+          echo "📦 Build uploaded to s3://${{ secrets.S3_BUCKET_NAME }}/${S3_KEY}"
+
       - name: Deploy to Blue Instance
         run: |
           INSTANCE_ID="${{ secrets.VPC1_BLUE_INSTANCE_ID }}"
@@ -61,17 +73,14 @@ jobs:
           # 인스턴스 상태 확인
           aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$INSTANCE_ID" --query 'InstanceInformationList[0].PingStatus' --output text
 
-          # 빌드 파일을 Base64로 인코딩 (줄바꿈 없이)
-          BUILD_DATA=$(base64 -w 0 frontend-build.tar.gz)
-
-          # 배포 명령 실행
+          # S3에서 빌드 파일 다운로드하여 배포
           aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
               \"echo '🔵 Starting Blue Instance deployment...'\",
               \"cd /tmp\",
-              \"echo '$BUILD_DATA' | base64 --decode > frontend-build.tar.gz\",
+              \"aws s3 cp s3://${{ secrets.S3_BUCKET_NAME }}/${S3_BUILD_KEY} frontend-build.tar.gz\",
               \"ls -la frontend-build.tar.gz\",
               \"sudo rm -rf /tmp/vue-build\",
               \"sudo mkdir -p /tmp/vue-build\",
@@ -113,17 +122,14 @@ jobs:
           # 인스턴스 상태 확인
           aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$INSTANCE_ID" --query 'InstanceInformationList[0].PingStatus' --output text
 
-          # 빌드 파일을 Base64로 인코딩 (줄바꿈 없이)
-          BUILD_DATA=$(base64 -w 0 frontend-build.tar.gz)
-
-          # 배포 명령 실행
+          # S3에서 빌드 파일 다운로드하여 배포
           aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
               \"echo '🟢 Starting Green Instance deployment...'\",
               \"cd /tmp\",
-              \"echo '$BUILD_DATA' | base64 --decode > frontend-build.tar.gz\",
+              \"aws s3 cp s3://${{ secrets.S3_BUCKET_NAME }}/${S3_BUILD_KEY} frontend-build.tar.gz\",
               \"ls -la frontend-build.tar.gz\",
               \"sudo rm -rf /tmp/vue-build\",
               \"sudo mkdir -p /tmp/vue-build\",
