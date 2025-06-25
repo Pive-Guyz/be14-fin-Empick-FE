@@ -3,7 +3,7 @@
     <div class="login-background">
       <div class="background-pattern"></div>
     </div>
-    
+
     <div class="login-box">
       <div class="logo-area">
         <img src="@/assets/logo.png" alt="Logo" class="logo" />
@@ -16,38 +16,21 @@
       </div>
 
       <div class="login-form-container">
-        <h3 class="login-title">로그인</h3>
-        
+        <h3 class="login-title">로그인1</h3>
+
         <v-form ref="form" v-model="isFormValid" @submit.prevent="handleLogin">
           <div class="form-field">
-            <v-text-field 
-              v-model="formData.employeeNumber" 
-              label="사원번호" 
-              :rules="[rules.required, rules.employeeNumber]"
-              :error-messages="errors.employeeNumber" 
-              @input="clearError('employeeNumber')" 
-              outlined 
-              dense
-              prepend-inner-icon="mdi-account"
-              class="custom-field"
-            ></v-text-field>
+            <v-text-field v-model="formData.employeeNumber" label="사원번호" :rules="[rules.required, rules.employeeNumber]"
+              :error-messages="errors.employeeNumber" @input="clearError('employeeNumber')" outlined dense
+              prepend-inner-icon="mdi-account" class="custom-field"></v-text-field>
           </div>
 
           <div class="form-field">
-            <v-text-field 
-              v-model="formData.password" 
-              label="비밀번호" 
-              :type="showPassword ? 'text' : 'password'"
-              :rules="[rules.required, rules.password]" 
-              :error-messages="errors.password" 
-              @input="clearError('password')"
-              :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'" 
-              @click:append-inner="togglePassword" 
-              outlined
-              dense
-              prepend-inner-icon="mdi-lock"
-              class="custom-field"
-            ></v-text-field>
+            <v-text-field v-model="formData.password" label="비밀번호" :type="showPassword ? 'text' : 'password'"
+              :rules="[rules.required, rules.password]" :error-messages="errors.password"
+              @input="clearError('password')" :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+              @click:append-inner="togglePassword" outlined dense prepend-inner-icon="mdi-lock"
+              class="custom-field"></v-text-field>
           </div>
 
           <div class="forgot-password">
@@ -56,28 +39,14 @@
             </router-link>
           </div>
 
-          <v-btn 
-            type="submit" 
-            color="primary" 
-            :loading="authStore.loading" 
-            :disabled="!isFormValid || authStore.loading"
-            block 
-            class="login-button"
-            size="large"
-            elevation="2"
-          >
+          <v-btn type="submit" color="primary" :loading="authStore.loading"
+            :disabled="!isFormValid || authStore.loading" block class="login-button" size="large" elevation="2">
             <v-icon left>mdi-login</v-icon>
             로그인
           </v-btn>
 
-          <v-alert 
-            v-if="authStore.error" 
-            type="error" 
-            density="compact" 
-            class="mt-3 error-alert" 
-            closable
-            @click:close="clearError()"
-          >
+          <v-alert v-if="authStore.error" type="error" density="compact" class="mt-3 error-alert" closable
+            @click:close="clearError()">
             {{ authStore.error }}
           </v-alert>
         </v-form>
@@ -151,7 +120,7 @@ const handleLogin = async () => {
     console.log('로그인 성공');
 
     // 로그인 성공 시 메인 페이지 & 그전 페이지로 이동
-    router.push({name : 'MainPage'});
+    router.push({ name: 'MainPage' });
   } catch (error) {
     console.error('로그인 실패:', error);
     // 에러는 authStore에서 처리됨
@@ -188,15 +157,22 @@ const handleLogin = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: 
+  background-image:
     radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
   animation: float 20s ease-in-out infinite;
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(180deg); }
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
 }
 
 .login-box {
@@ -364,15 +340,15 @@ const handleLogin = async () => {
     padding: 2rem 1.5rem;
     margin: 0.5rem;
   }
-  
+
   .main-title {
     font-size: 2rem;
   }
-  
+
   .subtitle {
     font-size: 1rem;
   }
-  
+
   .description {
     font-size: 0.9rem;
   }
@@ -384,23 +360,23 @@ const handleLogin = async () => {
     background: rgba(44, 62, 80, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
-  
+
   .main-title {
     color: #ecf0f1;
   }
-  
+
   .subtitle {
     color: #bdc3c7;
   }
-  
+
   .description {
     color: #95a5a6;
   }
-  
+
   .login-title {
     color: #ecf0f1;
   }
-  
+
   .custom-field :deep(.v-field) {
     background: rgba(44, 62, 80, 0.8);
     border: 1px solid rgba(102, 126, 234, 0.3);
