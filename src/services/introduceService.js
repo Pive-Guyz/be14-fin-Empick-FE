@@ -56,50 +56,10 @@ export const createIntroduceRatingResult = async (payload) => {
     console.log('✅ 평가 결과 저장 성공:', response.data)
     
     // 2. 저장된 평가 결과의 ID 추출
-    const ratingResultId = response.data?.data?.id || response.data?.id
+    const ratingResultId = response.data?.data?.introduceRatingResultId || response.data?.data?.id || response.data?.id
     console.log('🔍 저장된 평가 결과 ID:', ratingResultId)
     
-    // 3. application 테이블의 introduce_rating_result_id 업데이트
-    if (ratingResultId && payload.applicationId) {
-      try {
-        console.log('🔄 application.introduce_rating_result_id 업데이트 시작:', {
-          applicationId: payload.applicationId,
-          ratingResultId: ratingResultId,
-          ratingResultIdType: typeof ratingResultId,
-          applicationIdType: typeof payload.applicationId
-        })
-        
-        // application 업데이트 API 호출
-        const { updateApplicationIntroduceRatingResultService } = await import('@/services/applicationService')
-        const updateResult = await updateApplicationIntroduceRatingResultService(payload.applicationId, ratingResultId)
-        
-        console.log('✅ application.introduce_rating_result_id 업데이트 완료:', updateResult)
-        console.log('🔍 업데이트된 application 정보:', {
-          id: updateResult?.id,
-          introduceRatingResultId: updateResult?.introduceRatingResultId,
-          introduce_rating_result_id: updateResult?.introduce_rating_result_id
-        })
-      } catch (updateError) {
-        console.error('❌ application.introduce_rating_result_id 업데이트 실패:', updateError)
-        console.error('❌ 업데이트 에러 상세:', {
-          message: updateError.message,
-          response: updateError.response?.data,
-          status: updateError.response?.status,
-          config: updateError.config
-        })
-        // 평가 결과는 이미 저장되었으므로 업데이트 실패는 경고로만 처리
-        console.warn('⚠️ 평가 결과는 저장되었지만 application 연결 업데이트에 실패했습니다.')
-      }
-    } else {
-      console.warn('⚠️ ratingResultId 또는 applicationId가 없어 application 업데이트를 건너뜁니다.', {
-        ratingResultId,
-        ratingResultIdType: typeof ratingResultId,
-        applicationId: payload.applicationId,
-        applicationIdType: typeof payload.applicationId,
-        ratingResultIdTruthy: !!ratingResultId,
-        applicationIdTruthy: !!payload.applicationId
-      })
-    }
+    // 주의: application 테이블 업데이트는 ApplicationPage.vue에서 담당
     
     return response
   } catch (error) {
@@ -562,6 +522,32 @@ export const getIntroduceWithTemplateResponses = async (applicationId) => {
     return { introduce, templateItems, responses }
   } catch (error) {
     console.error('자기소개서 조회 실패:', error)
+    throw error
+  }
+}
+
+// 자기소개서 평가 결과 수정
+export const updateIntroduceRatingResult = async (ratingResultId, payload) => {
+  try {
+    console.log('🔄 자기소개서 평가 결과 수정:', { ratingResultId, payload })
+    
+    // 백엔드가 기대하는 필드명으로 변환
+    const requestData = {
+      content: payload.content,
+      ratingScore: payload.ratingScore,
+      rating_score: payload.ratingScore,
+      introduceStandardId: payload.introduceStandardId || payload.standardId || null,
+      introduce_standard_id: payload.introduceStandardId || payload.standardId || null,
+      memberId: payload.memberId || 1,
+      member_id: payload.memberId || 1
+    }
+    
+    const response = await api.patch(`/api/v1/employment/introduce-rating-result/${ratingResultId}`, requestData)
+    console.log('✅ 자기소개서 평가 결과 수정 완료:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('❌ 자기소개서 평가 결과 수정 실패:', error)
+    console.error('❌ 에러 응답:', error.response?.data)
     throw error
   }
 }

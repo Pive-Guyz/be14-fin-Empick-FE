@@ -449,13 +449,8 @@ import { useMemberStore } from '@/stores/memberStore'
 import { useToast } from 'vue-toastification'
 import { watch, computed } from 'vue'
 import IntroduceEvaluationInput from '@/components/employment/IntroduceEvaluationInput.vue'
-import {
-  getIntroduceRatingResultByApplicationId,
-  getIntroduceRatingResultByIntroduceId,
-  getIntroduceRatingResultById,
-  getAllIntroduceRatingResults
-} from '@/services/introduceService'
-import { updateApplicationStatusService } from '@/services/applicationService'
+// Service 직접 import 제거 - Store를 통해 접근
+// Service 직접 import 제거 - Store를 통해 접근
 import { STATUS_OPTIONS, getStatusByCode, getStatusInfoByString } from '@/constants/employment/applicationStatus'
 
 
@@ -1036,7 +1031,7 @@ const loadExistingEvaluationData = async (applicationId) => {
     const application = applicationStore.selectedApplication
     if (application && application.introduceRatingResultId) {
       console.log('🎯 application.introduce_rating_result_id로 직접 조회:', application.introduceRatingResultId)
-      existingEvaluation = await getIntroduceRatingResultById(application.introduceRatingResultId)
+      existingEvaluation = await introduceStore.getIntroduceRatingResultById(application.introduceRatingResultId)
 
       if (existingEvaluation) {
         console.log('✅ introduce_rating_result_id로 평가 결과 조회 성공!')
@@ -1053,7 +1048,7 @@ const loadExistingEvaluationData = async (applicationId) => {
     // 2. Fallback 1: applicationId로 평가 결과 조회 시도
     if (!existingEvaluation) {
       console.log('🔄 Fallback 1: applicationId로 평가 결과 조회 시도')
-      existingEvaluation = await getIntroduceRatingResultByApplicationId(applicationId)
+      existingEvaluation = await introduceStore.getIntroduceRatingResultByApplicationId(applicationId)
 
       if (existingEvaluation) {
         console.log('✅ applicationId로 평가 결과 조회 성공!')
@@ -1065,7 +1060,7 @@ const loadExistingEvaluationData = async (applicationId) => {
       const introduceData = applicationStore.introduceData
       if (introduceData && introduceData.id) {
         console.log('🔄 Fallback 2: introduceId로 평가 결과 재조회 시도... (introduceId:', introduceData.id, ')')
-        existingEvaluation = await getIntroduceRatingResultByIntroduceId(introduceData.id)
+        existingEvaluation = await introduceStore.getIntroduceRatingResultByIntroduceId(introduceData.id)
 
         if (existingEvaluation) {
           console.log('✅ introduceId로 평가 결과 조회 성공!')
@@ -1198,13 +1193,58 @@ const handleEvaluationSave = async (evaluationData) => {
   try {
     console.log('💾 평가 데이터 저장:', evaluationData)
 
+    // introduceId로 평가 결과 중복 체크
+    const introduceId = evaluationData.introduceId || evaluationData.introduce_id
+    if (!introduceId) {
+      toast.error('자기소개서 ID가 없습니다. 평가 저장이 불가합니다.')
+      return
+    }
+
+    let result
+    let ratingResultId = null
+    
+    // introduceId로 기존 평가 결과 조회
+    const existingResult = await introduceStore.getIntroduceRatingResultByIntroduceId(introduceId)
+    if (existingResult && existingResult.data) {
+      // 기존 평가가 있으면 PATCH(수정)
+      console.log('🔄 기존 평가 결과 수정:', existingResult.data.id)
+      result = await introduceStore.updateIntroduceRatingResult(existingResult.data.id, evaluationData)
+      ratingResultId = existingResult.data.id
+      toast.success('평가 결과가 수정되었습니다.')
+    } else {
+      // 기존 평가가 없으면 POST(등록)
+      console.log('✨ 새로운 평가 결과 등록')
+      result = await introduceStore.saveIntroduceRatingResult(evaluationData)
+      ratingResultId = result?.data?.id || result?.id
+      toast.success('평가 결과가 등록되었습니다.')
+    }
+
+    // 🔥 중요: application 테이블의 introduce_rating_result_id 업데이트
+    if (ratingResultId && evaluationData.applicationId) {
+      try {
+        console.log('🔄 application.introduce_rating_result_id 업데이트 시작:', {
+          applicationId: evaluationData.applicationId,
+          ratingResultId: ratingResultId
+        })
+        
+        await applicationStore.updateApplicationIntroduceRatingResult(evaluationData.applicationId, ratingResultId)
+        console.log('✅ application.introduce_rating_result_id 업데이트 완료')
+      } catch (updateError) {
+        console.error('❌ application.introduce_rating_result_id 업데이트 실패:', updateError)
+        toast.warn('평가는 저장되었지만 지원서 연결 업데이트에 실패했습니다.')
+      }
+    } else {
+      console.warn('⚠️ ratingResultId 또는 applicationId가 없어 application 업데이트를 건너뜁니다.', {
+        ratingResultId,
+        applicationId: evaluationData.applicationId
+      })
+    }
+
     // 평가 점수 업데이트
     if (evaluationData.ratingScore) {
       introduceRatingScore.value = evaluationData.ratingScore
       console.log('✅ 자기소개서 평가 점수 업데이트:', evaluationData.ratingScore)
     }
-
-    toast.success('평가가 저장되었습니다.')
 
     // 평가 완료 후 지원서 정보 새로고침하여 introduce_rating_result_id 반영
     try {

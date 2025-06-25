@@ -65,8 +65,8 @@
             min="0"
             max="100"
             class="score-input-field"
-            @input="handleScoreInput"
-            @blur="handleScoreBlur"
+            @input="isUserEditing = true"
+            @focus="isUserEditing = true"
           />
           <span>/100</span>
         </div>
@@ -74,8 +74,8 @@
           v-model="localComment"
           placeholder="지원자에 대한 총평을 남겨주세요."
           class="comment-textarea"
-          @input="handleCommentInput"
-          @blur="handleCommentBlur"
+          @input="isUserEditing = true"
+          @focus="isUserEditing = true"
         ></textarea>
       </div>
     </div>
@@ -123,19 +123,25 @@ const localStandardItems = ref([])
 const savingLoading = ref(false)
 
 // ViewModel: 데이터 초기화 및 기준표 복원
+const isUserEditing = ref(false)
+const hasInitialized = ref(false)
+
 watchEffect(async () => {
   if (props.evaluationData) {
     console.log('🔄 평가 데이터 초기화:', props.evaluationData)
     
-    // 점수와 총평 복원 (기존 값이 없을 때만 업데이트)
+    // 점수와 총평 복원 (처음 로드될 때만 또는 사용자가 편집 중이 아닐 때만)
     const score = props.evaluationData.totalScore || props.evaluationData.ratingScore
     const comment = props.evaluationData.comment || props.evaluationData.content
     
-    if (localTotalScore.value === null || localTotalScore.value === undefined) {
-      localTotalScore.value = score || null
-    }
-    if (localComment.value === '' || localComment.value === null || localComment.value === undefined) {
-      localComment.value = comment || ''
+    if (!hasInitialized.value || !isUserEditing.value) {
+      if (localTotalScore.value === null || localTotalScore.value === undefined) {
+        localTotalScore.value = score || null
+      }
+      if (localComment.value === '' || localComment.value === null || localComment.value === undefined) {
+        localComment.value = comment || ''
+      }
+      hasInitialized.value = true
     }
     
     console.log('📊 복원된 평가 데이터:', {
@@ -255,28 +261,7 @@ const onStandardSelect = async (standard) => {
 
 const emit = defineEmits(['save'])
 
-// 입력 값 유지를 위한 이벤트 핸들러
-const handleScoreInput = (event) => {
-  const value = event.target.value
-  localTotalScore.value = value ? Number(value) : null
-  console.log('📊 점수 입력:', localTotalScore.value)
-}
-
-const handleScoreBlur = (event) => {
-  const value = event.target.value
-  localTotalScore.value = value ? Number(value) : null
-  console.log('📊 점수 블러:', localTotalScore.value)
-}
-
-const handleCommentInput = (event) => {
-  localComment.value = event.target.value
-  console.log('📝 총평 입력:', localComment.value?.substring(0, 30) + '...')
-}
-
-const handleCommentBlur = (event) => {
-  localComment.value = event.target.value
-  console.log('📝 총평 블러:', localComment.value?.substring(0, 30) + '...')
-}
+// 이벤트 핸들러들은 v-model로 대체됨
 
 const handleSave = async () => {
   try {
@@ -307,13 +292,14 @@ const handleSave = async () => {
     
     console.log('💾 자기소개서 평가 저장 데이터:', evaluationData)
     
-    await introduceStore.saveIntroduceRatingResult(evaluationData)
+    // 🔥 중복 저장 방지: 직접 저장하지 않고 부모 컴포넌트에게만 이벤트 전달
+    // await introduceStore.saveIntroduceRatingResult(evaluationData) // 제거!
     emit('save', evaluationData)
-    toast.success('평가 결과가 성공적으로 저장되었습니다.')
+    // toast.success는 부모 컴포넌트에서 처리하므로 여기서는 제거
     
   } catch (e) {
-    console.error('평가 저장 실패:', e)
-    toast.error('저장에 실패했습니다. 다시 시도해주세요.')
+    console.error('평가 데이터 준비 실패:', e)
+    toast.error('평가 데이터 준비에 실패했습니다. 다시 시도해주세요.')
   } finally {
     savingLoading.value = false
   }

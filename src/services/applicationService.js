@@ -128,14 +128,18 @@ export const updateApplicationIntroduceRatingResultService = async (applicationI
       ratingResultId
     });
     
-    // 업데이트 데이터 준비 (snake_case와 camelCase 모두 포함)
+    // 백엔드 컨트롤러에 맞는 데이터 형식으로 준비
     const updateData = {
-      introduceRatingResultId: ratingResultId,
-      introduce_rating_result_id: ratingResultId
+      id: applicationId,
+      introduceRatingResultId: ratingResultId
     };
     
-    // PATCH 요청으로 application 업데이트
-    const response = await api.patch(ApplicationAPI.UPDATE_APPLICATION_STATUS(applicationId), updateData);
+    console.log('📤 전송할 데이터:', updateData);
+    
+    // PATCH 요청으로 application 업데이트 (백엔드 컨트롤러 경로와 일치)
+    const response = await api.patch(`/api/v1/employment/application/${applicationId}`, updateData);
+    console.log('📥 응답 데이터:', response.data);
+    
     const apiResponse = ApiResponseDTO.fromJSON(response.data);
 
     if (!apiResponse.success) {
@@ -143,7 +147,7 @@ export const updateApplicationIntroduceRatingResultService = async (applicationI
     }
 
     console.log('✅ application introduce_rating_result_id 업데이트 성공:', apiResponse.data);
-    return ApplicationResponseDTO.fromJSON(apiResponse.data);
+    return apiResponse.data;
   }, options);
 };
 
