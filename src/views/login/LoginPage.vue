@@ -16,7 +16,7 @@
       </div>
 
       <div class="login-form-container">
-        <h3 class="login-title">로그인2</h3>
+        <h3 class="login-title">로그인 : s3 배포방식 적용</h3>
 
         <v-form ref="form" v-model="isFormValid" @submit.prevent="handleLogin">
           <div class="form-field">
