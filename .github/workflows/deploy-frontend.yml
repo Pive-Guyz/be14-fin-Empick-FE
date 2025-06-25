@@ -1,4 +1,4 @@
-name: Deploy Frontend Direct to VPC1
+name: Deploy Frontend Simple (No S3)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
       - "public/**"
       - "package.json"
       - "vite.config.js"
-      - ".github/workflows/deploy-frontend.yml"
+      - ".github/workflows/deploy-frontend-simple.yml"
   workflow_dispatch: # 수동 실행 가능
 
 env:
@@ -17,7 +17,7 @@ env:
   BUILD_PATH: dist
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,44 +32,40 @@ jobs:
 
       - name: 📝 Create Production Environment File
         run: |
-          # Nginx 프록시 구조 활용 - /api 경로로 고정
           cat > .env.production << EOF
-          # API Base URL (Nginx 프록시를 통해 Backend로 전달)
           VITE_API_BASE_URL=/api
-
-          # 운영환경 설정
           VITE_TIMEOUT=30000
           VITE_DEBUG_MODE=false
           VITE_LOG_LEVEL=error
           VITE_ENABLE_CACHE=true
           EOF
 
-          echo "✅ Production environment file created:"
-          cat .env.production
-
       - name: 📦 Install dependencies
         run: |
           echo "📦 Installing npm dependencies..."
           npm ci --production=false
-          echo "✅ Dependencies installed successfully"
 
       - name: 🏗️ Build for production
         run: |
-          echo "🏗️ Building Vue.js application for production..."
+          echo "🏗️ Building Vue.js application..."
           npm run build
 
-          echo "📊 Build output summary:"
+          # 빌드 검증
+          if [ ! -f "${{ env.BUILD_PATH }}/index.html" ]; then
+            echo "❌ Build failed: index.html not found"
+            exit 1
+          fi
+
+          echo "📊 Build completed successfully:"
           ls -la ${{ env.BUILD_PATH }}/
           du -sh ${{ env.BUILD_PATH }}/
 
       - name: 📦 Create deployment package
         run: |
-          echo "📦 Creating deployment package..."
           cd ${{ env.BUILD_PATH }}
           tar -czf ../frontend-build.tar.gz .
           cd ..
-          ls -la frontend-build.tar.gz
-          echo "✅ Deployment package created"
+          echo "✅ Package created: $(ls -lh frontend-build.tar.gz)"
 
       - name: 🔐 Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -78,202 +74,97 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: 🚀 Deploy to VPC1 Blue Instance
+      - name: 🚀 Deploy to Blue Instance
         run: |
-          echo "🚀 Deploying Vue.js app to Blue Instance..."
+          echo "🚀 Deploying to Blue Instance..."
 
-          # SSM으로 배포 실행 - 더 안전한 스크립트
+          # 빌드 파일을 Base64로 인코딩해서 SSM으로 전송
+          BUILD_B64=$(base64 -w 0 frontend-build.tar.gz)
+
           aws ssm send-command \
             --instance-ids ${{ secrets.VPC1_BLUE_INSTANCE_ID }} \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "echo \"=== 🔄 Starting Vue.js deployment ===\"",
-              "echo \"Current time: $(date)\"",
-              "echo \"Current user: $(whoami)\"",
-              "echo \"Current directory: $(pwd)\"",
-              "echo \"=== 📂 Checking current web directory ===\"",
-              "ls -la /var/www/html/ || echo \"Directory not found\"",
-              "echo \"=== 💾 Creating backup ===\"",
-              "sudo mkdir -p /var/www/backup",
-              "if [ -d \"/var/www/html\" ] && [ \"$(ls -A /var/www/html)\" ]; then sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || echo \"Backup failed, continuing...\"; fi",
-              "echo \"=== 🗂️ Preparing deployment directory ===\"",
-              "sudo rm -rf /tmp/vue-deploy",
-              "sudo mkdir -p /tmp/vue-deploy",
-              "cd /tmp/vue-deploy",
-              "pwd",
-              "echo \"=== 📥 Downloading source from GitHub ===\"",
-              "curl -L -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\"",
-              "ls -la frontend-build.tar.gz",
-              "echo \"=== 📦 Extracting source ===\"",
-              "tar -xzf frontend-build.tar.gz",
-              "ls -la",
-              "cd be14-fin-Empick-FE-main",
-              "pwd",
-              "ls -la",
-              "echo \"=== 🔧 Node.js setup ===\"",
-              "node --version || (echo \"Installing Node.js...\" && curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash - && sudo yum install -y nodejs)",
-              "node --version",
-              "npm --version",
-              "echo \"=== 📦 Installing dependencies ===\"",
-              "npm ci --production=false",
-              "echo \"=== 🏗️ Building Vue.js application ===\"",
-              "npm run build",
-              "echo \"=== 📊 Checking build output ===\"",
-              "ls -la dist/",
-              "du -sh dist/",
-              "head -5 dist/index.html",
-              "echo \"=== 🚀 Deploying to web directory ===\"",
-              "sudo rm -rf /var/www/html/*",
-              "sudo cp -r dist/* /var/www/html/",
-              "echo \"=== ✅ Verifying deployment ===\"",
-              "ls -la /var/www/html/",
-              "head -5 /var/www/html/index.html",
-              "echo \"=== 🔐 Setting permissions ===\"",
-              "sudo chown -R nginx:nginx /var/www/html",
-              "sudo chmod -R 755 /var/www/html",
-              "echo \"=== 🔧 Reloading Nginx ===\"",
-              "sudo nginx -t",
-              "sudo systemctl reload nginx",
-              "sudo systemctl status nginx --no-pager",
-              "echo \"=== 🧹 Cleanup ===\"",
-              "cd / && sudo rm -rf /tmp/vue-deploy",
-              "echo \"=== ✅ Deployment completed successfully! ===\"",
-              "echo \"Final verification:\"",
-              "ls -la /var/www/html/",
-              "curl -s localhost | head -5 || echo \"Local curl failed\""
-            ]' \
+            --parameters "commands=[
+              \"echo '=== 🔄 Starting Vue.js deployment (BLUE) ==='\",
+              \"echo 'Build time: $(date)'\",
+              \"sudo mkdir -p /var/www/backup\",
+              \"if [ -d '/var/www/html' ] && [ '\$(ls -A /var/www/html)' ]; then sudo cp -r /var/www/html /var/www/backup/backup_\$(date +%Y%m%d_%H%M%S); fi\",
+              \"echo '=== 📥 Receiving build file ==='\",
+              \"echo '$BUILD_B64' | base64 -d > /tmp/frontend-build.tar.gz\",
+              \"ls -la /tmp/frontend-build.tar.gz\",
+              \"echo '=== 🚀 Deploying files ==='\",
+              \"sudo rm -rf /var/www/html/*\",
+              \"sudo tar -xzf /tmp/frontend-build.tar.gz -C /var/www/html/\",
+              \"sudo chown -R nginx:nginx /var/www/html\",
+              \"sudo chmod -R 755 /var/www/html\",
+              \"echo '=== 🔧 Reloading Nginx ==='\",
+              \"sudo nginx -t && sudo systemctl reload nginx\",
+              \"echo '=== ✅ Blue deployment completed! ==='\",
+              \"ls -la /var/www/html/ | head -5\",
+              \"curl -s localhost | head -3 || echo 'Local test failed'\",
+              \"rm -f /tmp/frontend-build.tar.gz\"
+            ]" \
             --output text
 
-      - name: ⏰ Wait for Blue Deployment
-        run: |
-          echo "⏰ Waiting for Blue deployment to complete..."
-          sleep 120
+      - name: ⏰ Wait for Blue deployment
+        run: sleep 60
 
-      - name: 🧪 Health Check - Blue Instance
+      - name: 🚀 Deploy to Green Instance
         run: |
-          echo "🧪 Performing health check on Blue instance..."
+          echo "🚀 Deploying to Green Instance..."
+
+          BUILD_B64=$(base64 -w 0 frontend-build.tar.gz)
+
+          aws ssm send-command \
+            --instance-ids ${{ secrets.VPC1_GREEN_INSTANCE_ID }} \
+            --document-name "AWS-RunShellScript" \
+            --parameters "commands=[
+              \"echo '=== 🔄 Starting Vue.js deployment (GREEN) ==='\",
+              \"echo 'Build time: $(date)'\",
+              \"sudo mkdir -p /var/www/backup\",
+              \"if [ -d '/var/www/html' ] && [ '\$(ls -A /var/www/html)' ]; then sudo cp -r /var/www/html /var/www/backup/backup_\$(date +%Y%m%d_%H%M%S); fi\",
+              \"echo '=== 📥 Receiving build file ==='\",
+              \"echo '$BUILD_B64' | base64 -d > /tmp/frontend-build.tar.gz\",
+              \"ls -la /tmp/frontend-build.tar.gz\",
+              \"echo '=== 🚀 Deploying files ==='\",
+              \"sudo rm -rf /var/www/html/*\",
+              \"sudo tar -xzf /tmp/frontend-build.tar.gz -C /var/www/html/\",
+              \"sudo chown -R nginx:nginx /var/www/html\",
+              \"sudo chmod -R 755 /var/www/html\",
+              \"echo '=== 🔧 Reloading Nginx ==='\",
+              \"sudo nginx -t && sudo systemctl reload nginx\",
+              \"echo '=== ✅ Green deployment completed! ==='\",
+              \"ls -la /var/www/html/ | head -5\",
+              \"curl -s localhost | head -3 || echo 'Local test failed'\",
+              \"rm -f /tmp/frontend-build.tar.gz\"
+            ]" \
+            --output text
+
+      - name: ⏰ Wait for Green deployment
+        run: sleep 60
+
+      - name: 🧪 Final Health Check
+        run: |
+          echo "🧪 Performing final health check..."
+          ALB_URL="${{ secrets.VPC1_ALB_URL }}"
 
           for i in {1..10}; do
-            echo "🔍 Health check attempt $i/10..."
-            if curl -f -s "${{ secrets.VPC1_ALB_URL }}/" | grep -q "Empick\|Vue\|app"; then
-              echo "✅ Blue instance health check passed!"
+            echo "🔍 Attempt $i/10..."
+            if curl -f -s "$ALB_URL/" | grep -q "Vite\|Vue\|app"; then
+              echo "✅ Health check passed!"
+              echo "🌐 Website: $ALB_URL"
               break
             fi
             if [ $i -eq 10 ]; then
-              echo "❌ Blue instance health check failed after 10 attempts"
+              echo "❌ Health check failed"
+              curl -s "$ALB_URL/" | head -5
               exit 1
             fi
             sleep 15
           done
 
-      - name: 🚀 Deploy to VPC1 Green Instance
+      - name: 📊 Deployment Summary
         run: |
-          echo "🚀 Deploying Vue.js app to Green Instance..."
-
-          # Green 인스턴스에도 동일한 배포 - 더 안전한 스크립트
-          aws ssm send-command \
-            --instance-ids ${{ secrets.VPC1_GREEN_INSTANCE_ID }} \
-            --document-name "AWS-RunShellScript" \
-            --parameters 'commands=[
-              "echo \"=== 🔄 Starting Vue.js deployment (GREEN) ===\"",
-              "echo \"Current time: $(date)\"",
-              "echo \"Current user: $(whoami)\"",
-              "echo \"Current directory: $(pwd)\"",
-              "echo \"=== 📂 Checking current web directory ===\"",
-              "ls -la /var/www/html/ || echo \"Directory not found\"",
-              "echo \"=== 💾 Creating backup ===\"",
-              "sudo mkdir -p /var/www/backup",
-              "if [ -d \"/var/www/html\" ] && [ \"$(ls -A /var/www/html)\" ]; then sudo cp -r /var/www/html /var/www/backup/backup_$(date +%Y%m%d_%H%M%S) 2>/dev/null || echo \"Backup failed, continuing...\"; fi",
-              "echo \"=== 🗂️ Preparing deployment directory ===\"",
-              "sudo rm -rf /tmp/vue-deploy",
-              "sudo mkdir -p /tmp/vue-deploy",
-              "cd /tmp/vue-deploy",
-              "pwd",
-              "echo \"=== 📥 Downloading source from GitHub ===\"",
-              "curl -L -o frontend-build.tar.gz \"https://github.com/Pive-Guyz/be14-fin-Empick-FE/archive/main.tar.gz\"",
-              "ls -la frontend-build.tar.gz",
-              "echo \"=== 📦 Extracting source ===\"",
-              "tar -xzf frontend-build.tar.gz",
-              "ls -la",
-              "cd be14-fin-Empick-FE-main",
-              "pwd",
-              "ls -la",
-              "echo \"=== 🔧 Node.js setup ===\"",
-              "node --version || (echo \"Installing Node.js...\" && curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash - && sudo yum install -y nodejs)",
-              "node --version",
-              "npm --version",
-              "echo \"=== 📦 Installing dependencies ===\"",
-              "npm ci --production=false",
-              "echo \"=== 🏗️ Building Vue.js application ===\"",
-              "npm run build",
-              "echo \"=== 📊 Checking build output ===\"",
-              "ls -la dist/",
-              "du -sh dist/",
-              "head -5 dist/index.html",
-              "echo \"=== 🚀 Deploying to web directory ===\"",
-              "sudo rm -rf /var/www/html/*",
-              "sudo cp -r dist/* /var/www/html/",
-              "echo \"=== ✅ Verifying deployment ===\"",
-              "ls -la /var/www/html/",
-              "head -5 /var/www/html/index.html",
-              "echo \"=== 🔐 Setting permissions ===\"",
-              "sudo chown -R nginx:nginx /var/www/html",
-              "sudo chmod -R 755 /var/www/html",
-              "echo \"=== 🔧 Reloading Nginx ===\"",
-              "sudo nginx -t",
-              "sudo systemctl reload nginx",
-              "sudo systemctl status nginx --no-pager",
-              "echo \"=== 🧹 Cleanup ===\"",
-              "cd / && sudo rm -rf /tmp/vue-deploy",
-              "echo \"=== ✅ Deployment completed successfully! ===\"",
-              "echo \"Final verification:\"",
-              "ls -la /var/www/html/",
-              "curl -s localhost | head -5 || echo \"Local curl failed\""
-            ]' \
-            --output text
-
-      - name: ⏰ Wait for Green Deployment
-        run: |
-          echo "⏰ Waiting for Green deployment to complete..."
-          sleep 120
-
-      - name: 🧪 Health Check - Green Instance
-        run: |
-          echo "🧪 Performing health check on Green instance..."
-
-          for i in {1..5}; do
-            echo "🔍 Health check attempt $i/5..."
-            if curl -f -s "${{ secrets.VPC1_ALB_URL }}/" | grep -q "Empick\|Vue\|app"; then
-              echo "✅ Green instance health check passed!"
-              break
-            fi
-            if [ $i -eq 5 ]; then
-              echo "⚠️ Green instance health check failed, but continuing..."
-            fi
-            sleep 10
-          done
-
-      - name: 🎉 Deployment Summary
-        run: |
-          echo "🎉 Vue.js Frontend Deployment Summary:"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "✅ Vue.js Build: SUCCESS"
-          echo "✅ Blue Instance Deploy: SUCCESS"
-          echo "✅ Green Instance Deploy: SUCCESS"
-          echo "✅ Health Checks: SUCCESS"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🎉 Deployment completed successfully!"
           echo "🌐 Frontend URL: ${{ secrets.VPC1_ALB_URL }}"
-          echo "🏥 Health Check: ${{ secrets.VPC1_ALB_URL }}/"
-          echo "📊 Build Size: $(du -sh ${{ env.BUILD_PATH }}/ | cut -f1)"
-          echo "⏰ Deployment Time: $(date)"
-
-      - name: ❌ Deployment Failed
-        if: failure()
-        run: |
-          echo "❌ Vue.js deployment failed!"
-          echo "🔧 Troubleshooting steps:"
-          echo "1. Check AWS SSM Run Command status in AWS Console"
-          echo "2. SSH to instances and check Nginx logs: sudo tail -f /var/log/nginx/error.log"
-          echo "3. Check Node.js installation: node --version"
-          echo "4. Check build process: npm run build"
-          echo "5. Check disk space: df -h"
+          echo "⏱️ Total time: Much faster than before!"
