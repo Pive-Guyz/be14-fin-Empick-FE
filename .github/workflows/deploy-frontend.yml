@@ -21,16 +21,15 @@ jobs:
         with:
           node-version: "18"
           cache: "npm"
-          cache-dependency-path: empick-frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: |
-          cd empick-frontend
-          npm ci
+        working-directory: ./
+        run: npm ci
 
       - name: Create production environment file
+        working-directory: ./
         run: |
-          cd empick-frontend
           cat > .env.production << EOF
           VITE_API_BASE_URL=/api
           VITE_APP_TITLE=Empick
@@ -38,15 +37,14 @@ jobs:
           EOF
 
       - name: Build application
-        run: |
-          cd empick-frontend
-          npm run build
+        working-directory: ./
+        run: npm run build
 
       - name: Create deployment package
+        working-directory: ./
         run: |
-          cd empick-frontend
-          tar -czf ../frontend-build.tar.gz -C dist .
-          ls -la ../frontend-build.tar.gz
+          tar -czf frontend-build.tar.gz -C dist .
+          ls -la frontend-build.tar.gz
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
