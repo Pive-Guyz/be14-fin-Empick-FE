@@ -5,6 +5,11 @@ import {
   createIntroduceItemService,
   deleteIntroduceItemService,
   createIntroduceRatingResult,
+  updateIntroduceRatingResult,
+  getIntroduceRatingResultByIntroduceId,
+  getIntroduceRatingResultByApplicationId,
+  getIntroduceRatingResultById,
+  getAllIntroduceRatingResults,
   getIntroduceByIdService,
   getAllIntroduceService,
   getIntroduceByApplicationIdService,
@@ -71,6 +76,80 @@ export const useIntroduceStore = defineStore('introduce', () => {
     } catch (e) {
       error.value = e.message
       throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 자기소개서 평가 결과 수정
+  const updateIntroduceRatingResultAction = async (ratingResultId, payload) => {
+    loading.value = true
+    error.value = null
+    try {
+      return await updateIntroduceRatingResult(ratingResultId, payload)
+    } catch (e) {
+      error.value = e.message
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // introduceId로 평가 결과 조회
+  const getIntroduceRatingResultByIntroduceIdAction = async (introduceId) => {
+    loading.value = true
+    error.value = null
+    try {
+      return await getIntroduceRatingResultByIntroduceId(introduceId)
+    } catch (e) {
+      error.value = e.message
+      console.warn('⚠️ introduceId로 평가 결과 조회 실패:', e.message)
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // applicationId로 평가 결과 조회
+  const getIntroduceRatingResultByApplicationIdAction = async (applicationId) => {
+    loading.value = true
+    error.value = null
+    try {
+      return await getIntroduceRatingResultByApplicationId(applicationId)
+    } catch (e) {
+      error.value = e.message
+      console.warn('⚠️ applicationId로 평가 결과 조회 실패:', e.message)
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // ID로 평가 결과 조회
+  const getIntroduceRatingResultByIdAction = async (ratingResultId) => {
+    loading.value = true
+    error.value = null
+    try {
+      return await getIntroduceRatingResultById(ratingResultId)
+    } catch (e) {
+      error.value = e.message
+      console.warn('⚠️ ID로 평가 결과 조회 실패:', e.message)
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // 전체 평가 결과 조회
+  const getAllIntroduceRatingResultsAction = async () => {
+    loading.value = true
+    error.value = null
+    try {
+      return await getAllIntroduceRatingResults()
+    } catch (e) {
+      error.value = e.message
+      console.warn('⚠️ 전체 평가 결과 조회 실패:', e.message)
+      return []
     } finally {
       loading.value = false
     }
@@ -173,7 +252,7 @@ export const useIntroduceStore = defineStore('introduce', () => {
     }
   }
 
-      return {
+  return {
     // 상태
     items,
     loading,
@@ -184,6 +263,11 @@ export const useIntroduceStore = defineStore('introduce', () => {
     addItem,
     removeItem,
     saveIntroduceRatingResult,
+    updateIntroduceRatingResult: updateIntroduceRatingResultAction,
+    getIntroduceRatingResultByIntroduceId: getIntroduceRatingResultByIntroduceIdAction,
+    getIntroduceRatingResultByApplicationId: getIntroduceRatingResultByApplicationIdAction,
+    getIntroduceRatingResultById: getIntroduceRatingResultByIdAction,
+    getAllIntroduceRatingResults: getAllIntroduceRatingResultsAction,
     fetchIntroduceById,
     getIntroduceByApplicationId,
     updateIntroduce,

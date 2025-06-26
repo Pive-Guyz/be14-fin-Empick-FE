@@ -7,6 +7,7 @@ import {
   getApplicationByApplicantIdService,
   createApplicationService,
   updateApplicationStatusService,
+  updateApplicationIntroduceRatingResultService,
   deleteApplicationService,
   createApplicationResponseService,
   getApplicationResponsesByApplicationIdService
@@ -187,6 +188,31 @@ export const useApplicationStore = defineStore('application', () => {
     if (applicationInList) {
       applicationInList.status = newStatus
       console.log('✅ Store: 목록의 지원서 상태 업데이트 완료')
+    }
+  };
+
+  // 🔗 지원서의 자기소개서 평가 결과 ID 업데이트
+  const updateApplicationIntroduceRatingResult = async (applicationId, ratingResultId) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      console.log('🔗 ApplicationStore: 지원서 평가 결과 ID 업데이트 시작:', { applicationId, ratingResultId })
+      const result = await updateApplicationIntroduceRatingResultService(applicationId, ratingResultId);
+      
+      // Store의 현재 지원서 업데이트
+      if (selectedApplication.value && selectedApplication.value.id === applicationId) {
+        selectedApplication.value.introduceRatingResultId = ratingResultId
+        console.log('✅ Store: 지원서 평가 결과 ID 업데이트 완료')
+      }
+      
+      console.log('✅ ApplicationStore: 지원서 평가 결과 ID 업데이트 성공:', result)
+      return result;
+    } catch (err) {
+      console.error('❌ ApplicationStore: 지원서 평가 결과 ID 업데이트 실패:', err)
+      error.value = err.message;
+      throw err;
+    } finally {
+      loading.value = false;
     }
   };
 
@@ -371,6 +397,7 @@ export const useApplicationStore = defineStore('application', () => {
     fetchApplicationByApplicantId,
     createApplication,
     updateApplicationStatus,
+    updateApplicationIntroduceRatingResult,
     deleteApplication,
     createApplicationResponse,
     getApplicationResponsesByApplicationId,
