@@ -196,8 +196,14 @@
       </v-card-text>
 
       <!-- 📋 지원자 테이블 -->
-      <v-data-table :headers="tableHeaders" :items="applicantStore.filteredAndSortedApplicants" :items-per-page="8"
-        item-key="uniqueKey" class="elevation-1" @update:options="handleSort" return-object>
+      <v-data-table 
+        :headers="tableHeaders" 
+        :items="applicantStore.filteredAndSortedApplicants" 
+        :items-per-page="8"
+        item-key="uniqueKey" 
+        class="elevation-1" 
+        @update:options="handleSort" 
+        return-object>
 
         <!-- 전체 선택 체크박스 헤더 -->
         <template #header.select>
@@ -245,8 +251,8 @@
 
         <!-- 실무테스트 상태 -->
         <template #item.jobtestStatus="{ item }">
-          <v-chip :color="item.applicationJobtestTitle ? 'primary' : 'grey'" variant="tonal" size="small">
-            {{ item.applicationJobtestTitle ? '할당됨' : '할당안됨' }}
+          <v-chip :color="item.jobtestStatus === 'ASSIGNED' ? 'primary' : 'grey'" variant="tonal" size="small">
+            {{ item.jobtestStatus === 'ASSIGNED' ? '할당됨' : '할당안됨' }}
           </v-chip>
         </template>
 
@@ -318,6 +324,8 @@
       @send="handleSendEmail"
       @cancel="handleEmailPreviewCancel"
     />
+
+
   </v-container>
 </template>
 
@@ -343,6 +351,7 @@ import ApplicationJobtestDTO from '@/dto/employment/jobtest/createApplicationJob
 import JobtestSelectModal from '@/components/employment/JobtestSelectModal.vue';
 import SelectEmailModal from '@/components/mail/SelectEmailModal.vue';
 import EmailPreviewModal from '@/components/mail/EmailPreviewModal.vue';
+
 
 // ===== Store 및 기본 설정 =====
 const toast = useToast();
@@ -377,6 +386,7 @@ const selectedEmailType = ref('');
 const sendingEmail = ref(false);
 const emailLoadingScreen = ref(false);
 const emailSuccessModal = ref(false);
+
 
 // 필터 상태 (Store와 연결)
 const statusFilter = computed({
@@ -490,26 +500,34 @@ const handleAssignClick = async () => {
 
   // 이미 실무테스트가 할당된 지원자 확인
   const alreadyAssignedApplicants = selectedApplicants.value.filter(
-    applicant => applicant.jobtestStatus && applicant.jobtestStatus !== 'WAITING'
+    applicant => applicant.jobtestStatus === 'ASSIGNED'
   )
 
   if (alreadyAssignedApplicants.length > 0) {
-    const names = alreadyAssignedApplicants.map(a => a.name).join(', ')
-    const confirmed = confirm(
-      `다음 지원자들은 이미 실무테스트가 할당되어 있습니다:\n${names}\n\n계속 진행하시겠습니까?`
-    )
+    const alreadyAssignedNames = alreadyAssignedApplicants.map(a => a.name).join(', ')
+    const confirmed = confirm(`다음 지원자들은 이미 실무테스트가 할당되어 있습니다: ${alreadyAssignedNames}\n계속 진행하시겠습니까?`)
+    
     if (!confirmed) {
       return
     }
   }
 
+  // 실무테스트 선택 모달 열기
+  await openJobtestSelectModal()
+}
+
+// 실무테스트 선택 모달 열기 함수
+const openJobtestSelectModal = async () => {
   try {
     await jobtestListStore.fetchJobtests()
     jobtestModal.value = true
   } catch (error) {
     console.error('실무 테스트 목록 조회 실패:', error)
+    toast.error('실무테스트 목록을 불러오는데 실패했습니다.')
   }
 }
+
+
 
 const handleJobtestSelected = async (jobtest) => {
   jobtestModal.value = false

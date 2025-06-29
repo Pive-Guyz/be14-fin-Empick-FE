@@ -36,6 +36,8 @@ export const useApplicantStore = defineStore('applicant', () => {
                 : applicant.applicantId
                     ? `applicant_${applicant.applicantId}_${index}`
                     : `temp_${Date.now()}_${index}_${Math.random().toString(36).substr(2, 9)}`,
+            // 실무테스트 상태 가상 필드 추가 (정렬용)
+            jobtestStatus: applicant.applicationJobtestTitle ? 'ASSIGNED' : 'UNASSIGNED'
         }));
     };
 
@@ -111,13 +113,7 @@ export const useApplicantStore = defineStore('applicant', () => {
 
         // 실무테스트 상태 필터링
         if (jobtestFilter.value !== null && jobtestFilter.value !== undefined) {
-            if (jobtestFilter.value === 'UNASSIGNED') {
-                // "할당안됨" 선택 시 - applicationJobtestTitle이 없는 경우
-                result = result.filter(applicant => !applicant.applicationJobtestTitle)
-            } else if (jobtestFilter.value === 'ASSIGNED') {
-                // "할당됨" 선택 시 - applicationJobtestTitle이 있는 경우
-                result = result.filter(applicant => applicant.applicationJobtestTitle)
-            }
+            result = result.filter(applicant => applicant.jobtestStatus === jobtestFilter.value)
         }
 
         // 지원공고 필터링
@@ -128,8 +124,18 @@ export const useApplicantStore = defineStore('applicant', () => {
         // 정렬
         if (sortKey.value) {
             result.sort((a, b) => {
-                let aValue = a[sortKey.value];
-                let bValue = b[sortKey.value];
+                let aValue, bValue;
+
+                // 실무테스트 상태 정렬 특별 처리
+                if (sortKey.value === 'jobtestStatus') {
+                    // jobtestStatus 필드를 기반으로 정렬
+                    // UNASSIGNED: 0, ASSIGNED: 1 (할당안됨이 먼저 오도록)
+                    aValue = a.jobtestStatus === 'ASSIGNED' ? 1 : 0;
+                    bValue = b.jobtestStatus === 'ASSIGNED' ? 1 : 0;
+                } else {
+                    aValue = a[sortKey.value];
+                    bValue = b[sortKey.value];
+                }
 
                 // null/undefined 처리
                 if (aValue == null && bValue == null) return 0;
@@ -173,15 +179,15 @@ export const useApplicantStore = defineStore('applicant', () => {
     };
 
     const setSort = (options) => {
-        console.log('setSort 호출됨:', options);
+        console.log('🔄 setSort 호출됨:', options);
         if (options.sortBy && options.sortBy.length > 0) {
             sortKey.value = options.sortBy[0];
             sortOrder.value = options.sortDesc && options.sortDesc[0] ? 'desc' : 'asc';
+            console.log('✅ 정렬 설정:', { sortKey: sortKey.value, sortOrder: sortOrder.value });
         } else {
             sortKey.value = '';
             sortOrder.value = 'asc';
         }
-        console.log('정렬 설정:', { sortKey: sortKey.value, sortOrder: sortOrder.value });
     };
 
     // 필터 설정 함수들
@@ -358,6 +364,8 @@ export const useApplicantStore = defineStore('applicant', () => {
                 application.jobtestId = result.jobtestId;
                 application.jobtestAssignedAt = result.assignedAt;
                 application.hasJobtest = true;
+                // jobtestStatus 필드도 업데이트
+                application.jobtestStatus = 'ASSIGNED';
             }
         });
     };
