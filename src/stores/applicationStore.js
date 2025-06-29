@@ -20,6 +20,7 @@ export const useApplicationStore = defineStore('application', () => {
   const introduceData = ref(null); // 자기소개서 데이터
   const loading = ref(false);
   const error = ref(null);
+  const selectedJobtestInfo = ref(null);
 
   // ===== ViewModel (computed properties) =====
   // 현재 지원서의 평가 통계
@@ -35,9 +36,9 @@ export const useApplicationStore = defineStore('application', () => {
       },
       {
         type: '실무 테스트',
-        score: selectedApplication.value?.jobtestTotalScore || 0,
+        score: selectedApplication.value?.jobtestGradingScore || 0,
         average: 80,
-        result: (selectedApplication.value?.jobtestTotalScore || 0) >= 70 ? '합격' : '불합격'
+        result: (selectedApplication.value?.jobtestGradingScore || 0) >= 70 ? '합격' : '불합격'
       },
       {
         type: '면접',
@@ -174,18 +175,36 @@ export const useApplicationStore = defineStore('application', () => {
   };
 
   // 🔁 지원서 상태 업데이트
-  const updateApplicationStatus = (id, newStatus) => {
-    // Store의 현재 지원서 상태 업데이트
-    if (selectedApplication.value && selectedApplication.value.id === id) {
-      selectedApplication.value.status = newStatus
-      console.log('✅ Store: 지원서 상태 업데이트 완료:', { id, newStatus })
-    }
-    
-    // 목록에서도 해당 지원서 상태 업데이트
-    const applicationInList = applicationList.value.find(app => app.id === id)
-    if (applicationInList) {
-      applicationInList.status = newStatus
-      console.log('✅ Store: 목록의 지원서 상태 업데이트 완료')
+  const updateApplicationStatus = async (id, newStatus) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      console.log('🔄 ApplicationStore: 지원서 상태 변경 API 호출 시작:', { id, newStatus })
+      
+      // 실제 API 호출
+      const result = await updateApplicationStatusService(id, newStatus);
+      console.log('✅ ApplicationStore: 지원서 상태 변경 API 성공:', result)
+      
+      // API 호출 성공 후 Store의 상태도 업데이트
+      if (selectedApplication.value && selectedApplication.value.id === id) {
+        selectedApplication.value.status = newStatus
+        console.log('✅ Store: 지원서 상태 업데이트 완료:', { id, newStatus })
+      }
+      
+      // 목록에서도 해당 지원서 상태 업데이트
+      const applicationInList = applicationList.value.find(app => app.id === id)
+      if (applicationInList) {
+        applicationInList.status = newStatus
+        console.log('✅ Store: 목록의 지원서 상태 업데이트 완료')
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('❌ ApplicationStore: 지원서 상태 변경 실패:', err)
+      error.value = err.message;
+      throw err;
+    } finally {
+      loading.value = false;
     }
   };
 
@@ -340,6 +359,14 @@ export const useApplicationStore = defineStore('application', () => {
     console.log('🧹 ApplicationStore: 데이터 초기화 완료')
   };
 
+  const setSelectedJobtestInfo = (info) => {
+    selectedJobtestInfo.value = info;
+  };
+
+  const clearSelectedJobtestInfo = () => {
+    selectedJobtestInfo.value = null;
+  };
+
   return {
     // ===== Model (상태) =====
     applicationList,
@@ -348,6 +375,7 @@ export const useApplicationStore = defineStore('application', () => {
     introduceData,
     loading,
     error,
+    selectedJobtestInfo,
 
     // ===== ViewModel (computed) =====
     evaluationStats,
@@ -369,5 +397,7 @@ export const useApplicationStore = defineStore('application', () => {
     setIntroduceData,
     setApplication,
     resetApplicationData,
+    setSelectedJobtestInfo,
+    clearSelectedJobtestInfo,
   };
 });

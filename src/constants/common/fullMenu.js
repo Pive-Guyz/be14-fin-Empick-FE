@@ -23,22 +23,21 @@ export const fullMenu = {
         }
     ],
     인사: [
-        {
-            label: '조직 관리',
-            roles: [RoleCode.HR_ACCESS],
-            children: [
-                { label: '부서 관리', path: '/orgstructure/dept-manage' },
-                { label: '직무 관리', path: '/orgstructure/job-manage' },
-                { label: '직급 관리', path: '/orgstructure/rank-manage' },
-                { label: '직책 관리', path: '/orgstructure/position-manage' }
-            ]
-        },
+        // {
+        //     label: '조직 관리',
+        //     roles: [RoleCode.HR_ACCESS],
+        //     children: [
+        //         { label: '부서 관리', path: '/orgstructure/dept-manage' },
+        //         { label: '직무 관리', path: '/orgstructure/job-manage' },
+        //         { label: '직급 관리', path: '/orgstructure/rank-manage' },
+        //         { label: '직책 관리', path: '/orgstructure/position-manage' }
+        //     ]
+        // },
         {
             label: '사원 관리',
             roles: [RoleCode.HR_ACCESS],
             children: [
                 { label: "신규 사원 등록", path: "/orgstructure/member-register" },
-                { label: "사원 목록", path: "/attendance/all" },
                 { label: "사원정보변경 요청", path: "/orgstructure/members/edit-request" }
             ]
         }
@@ -76,14 +75,21 @@ export const fullMenu = {
     ],
     채용: [
         {
+            label: '지원자',
+            roles: [RoleCode.HR_ACCESS],
+            children: [
+                { label: '지원자 목록', path: routeMap.ApplicantPage }
+            ]
+        },
+        {
             label: '채용 공고',
             roles: [RoleCode.HR_ACCESS],
             children: [
                 { label: '채용 공고', path: routeMap.RecruitmentList },
                 { label: '채용 요청서', path: routeMap.RecruitmentRequestList },
                 //                 { label: '채용 공고 템플릿', path: '/employment/recruitments/templates' },
-                { label: '자기소개서 템플릿', path: routeMap.IntroduceTemplateListPage },
-                { label: '자기소개서 기준표', path: routeMap.IntroduceStandardListPage }
+                { label: '자기소개서 템플릿', path: routeMap.IntroduceTemplateListPage, activePaths: ['/employment/introduce-templates', '/employment/introduce-items/manage'] },
+                { label: '자기소개서 기준표', path: routeMap.IntroduceStandardListPage, activePaths: ['/employment/introduce-standard', '/employment/introduce-standard-items'] }
             ]
         },
         {
@@ -92,13 +98,6 @@ export const fullMenu = {
             children: [
                 { label: '실무테스트', path: routeMap.JobtestList },
                 { label: '실무테스트 문제', path: routeMap.JobtestQuestionList },
-            ]
-        },
-        {
-            label: '지원자',
-            roles: [RoleCode.HR_ACCESS],
-            children: [
-                { label: '지원자 목록', path: routeMap.ApplicantPage }
             ]
         },
         {

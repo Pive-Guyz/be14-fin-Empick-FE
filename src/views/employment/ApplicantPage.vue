@@ -1,5 +1,37 @@
 <template>
   <v-container fluid style="margin-top: 70px;">
+    <!-- 이메일 발송 로딩 화면 -->
+    <transition name="fade">
+      <div v-if="emailLoadingScreen" class="loading-overlay">
+        <div class="plane-animation">
+          <div class="plane-body">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <polygon points="10,40 70,10 55,40 70,70" fill="#42a5f5" stroke="#1976d2"
+                stroke-width="3" />
+              <polygon points="10,40 55,40 70,70 40,55" fill="#90caf9" stroke="#1976d2"
+                stroke-width="2" />
+            </svg>
+          </div>
+          <div class="plane-trail"></div>
+          <div class="plane-progress">
+            <v-progress-linear indeterminate color="blue lighten-2" height="8"
+              rounded></v-progress-linear>
+          </div>
+          <div class="plane-text">메일을 발송 중입니다...</div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 이메일 발송 성공 모달 -->
+    <transition name="fade">
+      <div v-if="emailSuccessModal" class="center-success-modal">
+        <div class="center-success-content">
+          <span class="emoji">🎉</span>
+          <div class="center-success-text">메일이 성공적으로 발송되었습니다!</div>
+        </div>
+      </div>
+    </transition>
+
     <v-card>
       <!-- 상단 타이틀 + 검색/버튼 영역 -->
       <v-card-title class="d-flex justify-between align-center flex-wrap">
@@ -36,17 +68,129 @@
         </div>
       </v-card-title>
 
+      <!-- 필터 영역 -->
+      <v-card-text>
+        <v-row align="center">
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="statusFilter"
+              :items="statusOptions"
+              item-title="label"
+              item-value="value"
+              label="처리 상태"
+              clearable
+              variant="outlined"
+              density="compact"
+              @update:model-value="applyFilters"
+            >
+              <template v-slot:selection="{ item }">
+                <v-chip :color="item.raw.color" variant="tonal" size="small">
+                  {{ item.raw.label }}
+                </v-chip>
+              </template>
+              <template v-slot:item="{ props, item }">
+                <v-list-item v-bind="props">
+                  <template v-slot:prepend>
+                    <v-chip :color="item.raw.color" variant="tonal" size="small">
+                      {{ item.raw.label }}
+                    </v-chip>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-select>
+          </v-col>
+          
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="jobtestFilter"
+              :items="jobtestStatusOptions"
+              item-title="label"
+              item-value="value"
+              label="실무테스트"
+              clearable
+              variant="outlined"
+              density="compact"
+              @update:model-value="applyFilters"
+            >
+              <template v-slot:selection="{ item }">
+                <v-chip :color="item.raw.color" variant="tonal" size="small">
+                  {{ item.raw.label }}
+                </v-chip>
+              </template>
+              <template v-slot:item="{ props, item }">
+                <v-list-item v-bind="props">
+                  <template v-slot:prepend>
+                    <v-chip :color="item.raw.color" variant="tonal" size="small">
+                      {{ item.raw.label }}
+                    </v-chip>
+                  </template>
+                </v-list-item>
+              </template>
+            </v-select>
+          </v-col>
+          
+          <v-col cols="12" md="4">
+            <v-select
+              v-model="recruitmentFilter"
+              :items="recruitmentOptions"
+              item-title="title"
+              item-value="id"
+              label="지원 공고"
+              clearable
+              variant="outlined"
+              density="compact"
+              @update:model-value="applyFilters"
+            >
+            </v-select>
+          </v-col>
+          
+          <v-col cols="12" md="2">
+            <v-btn 
+              color="grey-darken-1" 
+              variant="outlined" 
+              size="small" 
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+              block
+            >
+              필터 초기화
+            </v-btn>
+          </v-col>
+        </v-row>
+        
+        <!-- 필터 적용 상태 표시 -->
+        <div v-if="hasActiveFilters" class="mt-2">
+          <v-chip-group>
+            <v-chip v-if="statusFilter !== null && statusFilter !== undefined" closable @click:close="applicantStore.setStatusFilter(null)" color="primary" variant="tonal" size="small">
+              상태: {{ getStatusOptionLabel(statusFilter) }}
+            </v-chip>
+            <v-chip v-if="jobtestFilter !== null && jobtestFilter !== undefined" closable @click:close="applicantStore.setJobtestFilter(null)" color="secondary" variant="tonal" size="small">
+              실무테스트: {{ getJobtestOptionLabel(jobtestFilter) }}
+            </v-chip>
+            <v-chip v-if="recruitmentFilter !== null && recruitmentFilter !== undefined" closable @click:close="applicantStore.setRecruitmentFilter(null)" color="tertiary" variant="tonal" size="small">
+              공고: {{ getRecruitmentOptionLabel(recruitmentFilter) }}
+            </v-chip>
+          </v-chip-group>
+        </div>
+      </v-card-text>
+
       <!-- 검색 결과 요약 -->
-      <v-card-text v-if="search" class="text-caption text-grey">
+      <v-card-text v-if="search || hasActiveFilters" class="text-caption text-grey pt-0">
         <span v-if="getUniqueApplicantCount() === 1">
-          검색어 "{{ search }}"에 대한 검색 결과:
+          <span v-if="search">검색어 "{{ search }}"</span>
+          <span v-if="search && hasActiveFilters"> 및 </span>
+          <span v-if="hasActiveFilters">필터 조건</span>
+          에 대한 결과:
           지원자 {{ getUniqueApplicantCount() }}명
           <span v-if="applicantStore.filteredAndSortedApplicants.length > 1">
             (지원서 {{ applicantStore.filteredAndSortedApplicants.length }}건)
           </span>
         </span>
         <span v-else>
-          검색어 "{{ search }}"에 대한 검색 결과:
+          <span v-if="search">검색어 "{{ search }}"</span>
+          <span v-if="search && hasActiveFilters"> 및 </span>
+          <span v-if="hasActiveFilters">필터 조건</span>
+          에 대한 결과:
           지원자 {{ getUniqueApplicantCount() }}명, 지원서 {{ applicantStore.filteredAndSortedApplicants.length }}건
         </span>
       </v-card-text>
@@ -101,33 +245,21 @@
 
         <!-- 실무테스트 상태 -->
         <template #item.jobtestStatus="{ item }">
-          <div class="d-flex align-center justify-center">
-            <v-tooltip :text="getJobtestStatusTooltip(item)" location="top">
-              <template v-slot:activator="{ props }">
-                <div v-bind="props" class="d-flex align-center">
-                  <v-icon 
-                    :icon="getJobtestStatusIcon(item)" 
-                    :color="getJobtestStatusColor(item)"
-                    size="small"
-                    class="mr-1"
-                  />
-                  <v-chip 
-                    :color="getJobtestStatusColor(item)" 
-                    variant="tonal" 
-                    size="small"
-                    class="text-caption"
-                  >
-                    {{ getJobtestStatusText(item) }}
-                  </v-chip>
-                </div>
-              </template>
-            </v-tooltip>
-          </div>
+          <v-chip :color="item.applicationJobtestTitle ? 'primary' : 'grey'" variant="tonal" size="small">
+            {{ item.applicationJobtestTitle ? '할당됨' : '할당안됨' }}
+          </v-chip>
         </template>
 
         <!-- 직무 -->
         <template #item.jobName="{ item }">
           {{ item.jobName || '미지정' }}
+        </template>
+
+        <!-- 지원공고 제목 -->
+        <template #item.recruitmentTitle="{ item }">
+          <div class="text-caption">
+            {{ getRecruitmentTitle(item.recruitmentId) || '공고 정보 없음' }}
+          </div>
         </template>
 
         <!-- 지원서 확인 텍스트 버튼 -->
@@ -198,9 +330,10 @@ import { useMailStore } from '@/stores/mailStore';
 import { useMemberStore } from '@/stores/memberStore';
 import { useToast } from 'vue-toastification'
 import { useApplicantStore } from '@/stores/applicantStore'
+import { useRecruitmentStore } from '@/stores/recruitmentStore'
 import { useApplicantManager } from '@/composables/useApplicantManager'
 import { debounce } from 'lodash'
-import { getStatusByCode, getStatusInfoByString } from '@/constants/employment/applicationStatus'
+import { getStatusByCode, getStatusInfoByString, STATUS_OPTIONS } from '@/constants/employment/applicationStatus'
 
 // 실무테스트 할당
 
@@ -219,6 +352,7 @@ const applicantStore = useApplicantStore();
 const applicationStore = useApplicationStore();
 const mailStore = useMailStore();
 const memberStore = useMemberStore();
+const recruitmentStore = useRecruitmentStore();
 const router = useRouter()
 
 // Composable 사용 - 비즈니스 로직 분리
@@ -241,6 +375,33 @@ const emailTypeModal = ref(false);
 const emailPreviewModal = ref(false);
 const selectedEmailType = ref('');
 const sendingEmail = ref(false);
+const emailLoadingScreen = ref(false);
+const emailSuccessModal = ref(false);
+
+// 필터 상태 (Store와 연결)
+const statusFilter = computed({
+  get: () => applicantStore.statusFilter,
+  set: (value) => {
+    console.log('🔄 statusFilter 변경됨:', value)
+    applicantStore.setStatusFilter(value)
+  }
+})
+
+const jobtestFilter = computed({
+  get: () => applicantStore.jobtestFilter,
+  set: (value) => {
+    console.log('🔄 jobtestFilter 변경됨:', value)
+    applicantStore.setJobtestFilter(value)
+  }
+})
+
+const recruitmentFilter = computed({
+  get: () => applicantStore.recruitmentFilter,
+  set: (value) => {
+    console.log('🔄 recruitmentFilter 변경됨:', value)
+    applicantStore.setRecruitmentFilter(value)
+  }
+})
 
 // ===== View 데이터 (상수) =====
 const tableHeaders = [
@@ -254,6 +415,29 @@ const tableHeaders = [
   { title: '실무테스트', key: 'jobtestStatus', sortable: true, align: 'center', width: '120px' },
   { title: '지원공고', key: 'recruitmentTitle', sortable: true, align: 'start' }
 ]
+
+// 필터 옵션들
+const statusOptions = computed(() => {
+  return [
+    ...STATUS_OPTIONS.map(status => ({
+      label: status.label,
+      value: status.code,
+      color: status.color
+    }))
+  ]
+})
+
+const jobtestStatusOptions = ref([
+  { label: '할당안됨', value: 'UNASSIGNED', color: 'grey' },
+  { label: '할당됨', value: 'ASSIGNED', color: 'primary' }
+])
+
+const recruitmentOptions = computed(() => {
+  return recruitmentStore.list.map(recruitment => ({
+    title: recruitment.title,
+    id: recruitment.id
+  }))
+})
 
 // ===== ViewModel: 계산된 속성 =====
 // 상태 관련 유틸리티 함수들 (통합된 상태 관리 사용)
@@ -324,7 +508,6 @@ const handleAssignClick = async () => {
     jobtestModal.value = true
   } catch (error) {
     console.error('실무 테스트 목록 조회 실패:', error)
-    toast.error('실무 테스트 목록을 불러오는 데 실패했습니다.')
   }
 }
 
@@ -394,7 +577,6 @@ const handleJobtestSelected = async (jobtest) => {
     await applicantStore.fetchApplicantFullInfoList()
   } catch (error) {
     console.error('실무테스트 할당 실패:', error)
-    toast.error(applicationJobtestStore.errorMessage || '실무테스트 할당에 실패했습니다.')
   }
 }
 
@@ -460,7 +642,11 @@ const toggleSelectAll = (selectAll) => {
 // ===== 생명주기 및 감시자 =====
 onMounted(async () => {
   try {
-    await applicantStore.fetchApplicantFullInfoList()
+    // 병렬로 데이터 로드
+    await Promise.all([
+      applicantStore.fetchApplicantFullInfoList(),
+      recruitmentStore.loadRecruitmentList()
+    ])
     
     // 🎯 지원자 정보 및 application_id 로그 출력
     console.log('🎉 ====== 지원자 목록 로드 완료 ======')
@@ -478,14 +664,17 @@ onMounted(async () => {
       console.log(`   💼 직무: ${applicant.jobName || '직무 미지정'}`)
       console.log(`   📈 지원서 상태: ${applicant.status || '상태 없음'}`)
       console.log(`   🧪 실무테스트 상태: ${applicant.jobtestStatus || '미할당'}`)
+      console.log(`   📑 지원공고 ID: ${applicant.recruitmentId || '공고ID 없음'}`)
+      console.log(`   🧪 실무테스트 : ${applicant.applicationJobtestTitle || '미할당'}`)
       console.log('   ─────────────────────────────────')
     })
     
     console.log('🎉 ====== 지원자 정보 로그 출력 완료 ======')
+    console.log(`📑 채용공고 수: ${recruitmentStore.list.length}개`)
     
   } catch (error) {
-    console.error('❌ 지원자 목록 조회 실패:', error)
-    toast.error('지원자 목록을 불러오는 데 실패했습니다.')
+    console.error('❌ 데이터 로드 실패:', error)
+    toast.error('데이터를 불러오는 데 실패했습니다.')
   }
 })
 
@@ -537,8 +726,12 @@ const handleSendEmail = async () => {
   console.log('📧 첫 번째 선택된 항목의 모든 키:', Object.keys(selectedApplicants.value[0]));
 
   sendingEmail.value = true;
+  emailLoadingScreen.value = true;
 
   try {
+    // 애니메이션용 딜레이
+    await new Promise(res => setTimeout(res, 1200));
+
     const emailData = [];
 
     // applicationId를 찾지 못한 경우를 위해 모든 지원서를 미리 가져오기
@@ -670,11 +863,21 @@ const handleSendEmail = async () => {
 
     emailPreviewModal.value = false;
     selectedEmailType.value = '';
+    
+    // 성공 모달 표시
+    emailSuccessModal.value = true;
+    setTimeout(() => {
+      emailSuccessModal.value = false;
+    }, 2200);
+    
   } catch (error) {
     console.error('❌ 이메일 발송 실패:', error);
     toast.error('이메일 발송에 실패했습니다: ' + error.message);
   } finally {
     sendingEmail.value = false;
+    setTimeout(() => {
+      emailLoadingScreen.value = false;
+    }, 900);
   }
 };
 
@@ -683,67 +886,6 @@ const handleEmailPreviewCancel = () => {
   emailPreviewModal.value = false;
 };
 
-// 실무테스트 상태 관련 유틸리티 함수들
-const getJobtestStatusText = (item) => {
-  if (!item.jobtestStatus) {
-    return '미할당'
-  }
-  
-  switch (item.jobtestStatus) {
-    case 'WAITING':
-      return '대기중'
-    case 'IN_PROGRESS':
-      return '진행중'
-    case 'COMPLETED':
-      return '완료'
-    default:
-      return '할당됨'
-  }
-}
-
-const getJobtestStatusColor = (item) => {
-  if (!item.jobtestStatus) {
-    return 'grey'
-  }
-  
-  switch (item.jobtestStatus) {
-    case 'WAITING':
-      return 'orange'
-    case 'IN_PROGRESS':
-      return 'blue'
-    case 'COMPLETED':
-      return 'green'
-    default:
-      return 'purple'
-  }
-}
-
-const getJobtestStatusIcon = (item) => {
-  if (!item.jobtestStatus) {
-    return 'mdi-close-circle-outline'
-  }
-  
-  switch (item.jobtestStatus) {
-    case 'WAITING':
-      return 'mdi-clock-outline'
-    case 'IN_PROGRESS':
-      return 'mdi-play-circle-outline'
-    case 'COMPLETED':
-      return 'mdi-check-circle-outline'
-    default:
-      return 'mdi-checkbox-marked-circle-outline'
-  }
-}
-
-const getJobtestStatusTooltip = (item) => {
-  if (!item.jobtestStatus) {
-    return '실무테스트가 할당되지 않았습니다'
-  }
-  
-  const statusText = getJobtestStatusText(item)
-  const score = item.jobtestTotalScore ? ` (점수: ${item.jobtestTotalScore}점)` : ''
-  return `실무테스트 상태: ${statusText}${score}`
-}
 
 const getAssignButtonText = () => {
   if (selectedApplicants.value.length === 0) {
@@ -755,10 +897,215 @@ const getAssignButtonText = () => {
   }
 }
 
+// 필터 관련 함수들
+const hasActiveFilters = computed(() => {
+  const result = statusFilter.value !== null && statusFilter.value !== undefined || 
+                jobtestFilter.value !== null && jobtestFilter.value !== undefined || 
+                recruitmentFilter.value !== null && recruitmentFilter.value !== undefined
+  console.log('🔍 hasActiveFilters 체크:', {
+    statusFilter: statusFilter.value,
+    jobtestFilter: jobtestFilter.value,
+    recruitmentFilter: recruitmentFilter.value,
+    hasActive: result
+  })
+  return result
+})
+
+const applyFilters = () => {
+  // computed를 통해 자동으로 Store에 연결되므로 별도 호출 불필요
+}
+
+const clearFilters = () => {
+  applicantStore.clearFilters()
+}
+
+const getStatusOptionLabel = (value) => {
+  const option = statusOptions.value.find(opt => opt.value === value)
+  return option ? option.label : ''
+}
+
+const getJobtestOptionLabel = (value) => {
+  const option = jobtestStatusOptions.value.find(opt => opt.value === value)
+  return option ? option.label : ''
+}
+
+const getRecruitmentOptionLabel = (value) => {
+  const option = recruitmentOptions.value.find(opt => opt.id === value)
+  return option ? option.title : ''
+}
+
+const getRecruitmentTitle = (recruitmentId) => {
+  const recruitment = recruitmentStore.list.find(r => r.id === recruitmentId)
+  return recruitment ? recruitment.title : null
+}
+
+const refreshList = async () => {
+  try {
+    await applicantStore.fetchApplicantFullInfoList()
+    toast.success('목록을 새로고침했습니다.')
+  } catch (error) {
+    console.error('새로고침 실패:', error)
+    toast.error('목록 새로고침에 실패했습니다.')
+  }
+}
+
 </script>
 
 <style scoped>
 .v-data-table {
   margin-top: 20px;
+}
+
+.loading-overlay {
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadein 0.5s;
+}
+
+@keyframes fadein {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.plane-animation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.plane-body {
+  animation: plane-fly 1.2s infinite alternate cubic-bezier(.4, 2, .6, 1);
+}
+
+@keyframes plane-fly {
+  0% {
+    transform: translateY(0) rotate(-8deg);
+  }
+  100% {
+    transform: translateY(-24px) rotate(8deg);
+  }
+}
+
+.plane-trail {
+  width: 80px;
+  height: 12px;
+  margin-top: -10px;
+  background: linear-gradient(90deg, #42a5f5 0%, #fff 100%);
+  border-radius: 8px;
+  filter: blur(2px);
+  opacity: 0.5;
+  animation: trail-move 1.2s infinite alternate;
+}
+
+@keyframes trail-move {
+  0% {
+    width: 80px;
+    opacity: 0.5;
+  }
+  100% {
+    width: 120px;
+    opacity: 0.8;
+  }
+}
+
+.plane-progress {
+  width: 180px;
+  margin: 32px 0 8px 0;
+}
+
+.plane-text {
+  font-size: 1.2rem;
+  color: #1976d2;
+  font-weight: 600;
+  margin-top: 8px;
+  letter-spacing: 0.01em;
+}
+
+.center-success-modal {
+  position: fixed;
+  z-index: 20000;
+  left: 0; top: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.55);
+  animation: fadein 0.3s;
+}
+
+.center-success-content {
+  background: rgba(255,255,255,0.98);
+  border-radius: 32px;
+  box-shadow: 0 8px 32px 0 rgba(80,120,200,0.18);
+  padding: 3rem 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: alert-pop 0.7s;
+}
+
+@keyframes alert-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.center-success-text {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1976d2;
+  margin-top: 1.2rem;
+  text-align: center;
+}
+
+
+.emoji {
+  font-size: 1.5rem;
+  margin-right: 0.5rem;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 600px) {
+  .center-success-content {
+    padding: 1.2rem 1rem;
+    border-radius: 18px;
+  }
+  .center-success-text {
+    font-size: 1.1rem;
+  }
+  .plane-progress {
+    width: 120px;
+  }
+  .plane-text {
+    font-size: 1rem;
+  }
 }
 </style>

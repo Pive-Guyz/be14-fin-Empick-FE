@@ -24,7 +24,7 @@
                         </template>
 
                         <v-list-item v-for="(subItem, j) in section.children" :key="j" :title="subItem.label"
-                            :to="subItem.path" link :active="route.path === subItem.path || route.path.startsWith(subItem.path)" class="menu-item"
+                            :to="subItem.path" link :active="isMenuItemActive(subItem)" class="menu-item"
                             active-class="active-item" />
                     </v-list-group>
                 </template>
@@ -47,11 +47,11 @@
         </v-list>
 
         <div class="bottom-section">
-            <div class="dark-mode-toggle">
+            <!-- <div class="dark-mode-toggle">
                 <v-icon start>mdi-weather-night</v-icon>
                 Dark Mode
                 <v-switch hide-details inset v-model="darkMode" class="ml-auto" />
-            </div>
+            </div> -->
 
             <v-btn block color="#607285" class="logout-btn" prepend-icon="mdi-logout" @click="authStore.logout">
                 Logout
@@ -75,7 +75,7 @@ const userRoles = computed(() => authStore.userInfo?.roles || [])
 
 // 현재 경로에 따라 헤더 메뉴 결정
 const headerTitle = computed(() => {
-    if (route.path.startsWith('/hr')) return '인사'
+    if (route.path.startsWith('/orgstructure')) return '인사'
     if (route.path.startsWith('/attendance')) return '근태'
     if (route.path.startsWith('/approval')) return '결재'
     if (route.path.startsWith('/employment')) return '채용'
@@ -84,11 +84,26 @@ const headerTitle = computed(() => {
     return '내정보'
 })
 
+// 메뉴 항목 활성화 확인 함수
+function isMenuItemActive(item) {
+    // 기본 경로 확인
+    if (route.path === item.path || route.path.startsWith(item.path)) {
+        return true
+    }
+    
+    // activePaths가 있는 경우 추가 확인
+    if (item.activePaths && Array.isArray(item.activePaths)) {
+        return item.activePaths.some(activePath => 
+            route.path === activePath || route.path.startsWith(activePath)
+        )
+    }
+    
+    return false
+}
+
 // 현재 경로에 포함된 하위 항목이 있는 그룹만 열림
 function isGroupOpen(section) {
-    return section.children.some((item) =>
-        route.path === item.path || route.path.startsWith(item.path)
-    )
+    return section.children.some((item) => isMenuItemActive(item))
 }
 
 const menu = computed(() => filterMenuByRoles(fullMenu, userRoles.value))
