@@ -67,17 +67,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useInterviewSheetStore } from '@/stores/interviewSheetStore'
 import { useInterviewCriteriaStore } from '@/stores/interviewCriteriaStore'
-import { useAuthStore } from '@/stores/authStore'
+import { useMemberStore } from '@/stores/memberStore'
+import { useToast } from 'vue-toastification'
 
+const toast = useToast()
 const sheetStore = useInterviewSheetStore()
 const criteriaStore = useInterviewCriteriaStore()
-const authStore = useAuthStore()
-const memberId = authStore.userInfo?.id
+const memberStore = useMemberStore()
+const memberId = ref(null)
 
 const router = useRouter()
 
@@ -86,13 +88,25 @@ const criteria = ref([
     { title: '', content: '', weight: 0 }
 ])
 
+// 페이지 로드 시 myInfo 가져오기
+onMounted(async () => {
+    try {
+        await memberStore.getMyInfo()
+        memberId.value = memberStore.form.id
+        console.log('memberId loaded:', memberId.value)
+    } catch (error) {
+        console.error('myInfo 로드 실패:', error)
+        toast.error('사용자 정보를 불러오는데 실패했습니다.')
+    }
+})
+
 const addCriterion = () => {
     criteria.value.push({ title: '', content: '', weight: 0 })
 }
 
 const removeCriterion = (index) => {
     if (criteria.value.length === 1) {
-        alert("최소 하나의 평가 기준은 필요합니다.");
+        toast.error("최소 하나의 평가 기준은 필요합니다.");
         return;
     }
     criteria.value.splice(index, 1);
@@ -106,23 +120,23 @@ const goBackToCriteriaPage = () => {
 
 const submitSheet = async () => {
     if (!sheetName.value.trim()) {
-        alert('평가표 이름을 입력해주세요.');
+        toast.error('평가표 이름을 입력해주세요.');
         return;
     }
 
     if (criteria.value.length === 0) {
-        alert('최소 하나 이상의 평가 기준을 추가해주세요.');
+        toast.error('최소 하나 이상의 평가 기준을 추가해주세요.');
         return;
     }
 
     const totalWeight = criteria.value.reduce((sum, criterion) => sum + criterion.weight, 0);
     if (totalWeight !== 100) {
-        alert(`가중치 총합이 반드시 100%여야 합니다. 현재 총합: ${totalWeight}%`);
+        toast.error(`가중치 총합이 반드시 100%여야 합니다. 현재 총합: ${totalWeight}%`);
         return;
     }
 
     const timestamp = new Date().toISOString()
-    console.log('userInfo:', authStore.userInfo)
+    console.log('userInfo:', memberStore.form)
 
     try {
         // ✅ 1. Store 통해 평가표 생성
@@ -130,7 +144,7 @@ const submitSheet = async () => {
             id: null,
             name: sheetName.value,
             isDeleted: false,
-            memberId: memberId,
+            memberId: memberId.value,
             updatedAt: timestamp
         }
         const sheetResponse = await sheetStore.createSheet(sheetDTO)
@@ -145,17 +159,17 @@ const submitSheet = async () => {
                 content: c.content,
                 weight: c.weight / 100, // 0~1 로 변환
                 isDeleted: 'N',
-                memberId: memberId,
+                memberId: memberId.value,
                 updatedAt: timestamp
             }
             await criteriaStore.createCriteria(criteriaDTO)
         }
 
-        alert('평가표와 기준들이 성공적으로 등록되었습니다!')
+        toast.success('평가표와 기준들이 성공적으로 등록되었습니다!')
         goBackToCriteriaPage()
     } catch (error) {
         console.error('등록 실패:', error)
-        alert('등록 중 오류가 발생했습니다.')
+        // toast.error('등록 중 오류가 발생했습니다.')
     }
 }
 

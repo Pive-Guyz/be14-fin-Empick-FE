@@ -428,10 +428,8 @@ const statusOptions = computed(() => {
 })
 
 const jobtestStatusOptions = ref([
-  { label: '미할당', value: 'UNASSIGNED', color: 'grey' },
-  { label: '대기중', value: 'WAITING', color: 'orange' },
-  { label: '진행중', value: 'IN_PROGRESS', color: 'blue' },
-  { label: '완료', value: 'COMPLETED', color: 'green' }
+  { label: '할당안됨', value: 'UNASSIGNED', color: 'grey' },
+  { label: '할당됨', value: 'ASSIGNED', color: 'primary' }
 ])
 
 const recruitmentOptions = computed(() => {
@@ -510,7 +508,6 @@ const handleAssignClick = async () => {
     jobtestModal.value = true
   } catch (error) {
     console.error('실무 테스트 목록 조회 실패:', error)
-    toast.error('실무 테스트 목록을 불러오는 데 실패했습니다.')
   }
 }
 
@@ -580,7 +577,6 @@ const handleJobtestSelected = async (jobtest) => {
     await applicantStore.fetchApplicantFullInfoList()
   } catch (error) {
     console.error('실무테스트 할당 실패:', error)
-    toast.error(applicationJobtestStore.errorMessage || '실무테스트 할당에 실패했습니다.')
   }
 }
 
