@@ -88,9 +88,9 @@ jobs:
               CURRENT_TIMESTAMP=$(cat current-trigger.json | grep -o '"timestamp":"[^"]*"' | cut -d'"' -f4)
               echo "📅 Current trigger timestamp: ${CURRENT_TIMESTAMP}"
               
-              # ALB Health Check로 배포 완료 확인
-              HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.VPC1_ALB_DNS_NAME }}" || echo "000")
-              echo "🏥 Health check: HTTP $HTTP_STATUS"
+              # ALB Health Check로 배포 완료 확인 (HTTPS 사용)
+              HTTP_STATUS=$(curl -s -k -o /dev/null -w "%{http_code}" "https://${{ secrets.VPC1_ALB_DNS_NAME }}" || echo "000")
+              echo "🏥 Health check: HTTPS $HTTP_STATUS"
               
               if [ "$HTTP_STATUS" = "200" ]; then
                 echo "✅ Deployment appears to be active, proceeding to verification..."
@@ -113,14 +113,14 @@ jobs:
           # ALB 엔드포인트 확인
           ALB_DNS="${{ secrets.VPC1_ALB_DNS_NAME }}"
 
-          # Health check (재시도 간격 단축)
+          # Health check (재시도 간격 단축) - HTTPS 사용
           for i in {1..6}; do
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$ALB_DNS" || echo "000")
-            echo "🏥 Final verification attempt $i/6: HTTP $HTTP_STATUS"
+            HTTP_STATUS=$(curl -s -k -o /dev/null -w "%{http_code}" "https://$ALB_DNS" || echo "000")
+            echo "🏥 Final verification attempt $i/6: HTTPS $HTTP_STATUS"
             
             if [ "$HTTP_STATUS" = "200" ]; then
               echo "✅ Deployment verification successful!"
-              echo "🌐 Frontend URL: http://$ALB_DNS"
+              echo "🌐 Frontend URL: https://$ALB_DNS"
               echo "🎉 Deployment completed successfully"
               exit 0
             fi
@@ -133,5 +133,5 @@ jobs:
 
           echo "❌ Deployment verification failed after 6 attempts"
           echo "🔧 Please check ALB and EC2 instances manually"
-          echo "🌐 ALB URL: http://$ALB_DNS"
+          echo "🌐 ALB URL: https://$ALB_DNS"
           exit 1
