@@ -113,6 +113,62 @@ export const getMyInfoService = async () => {
     }
 };
 
+// 사원 정보 수정 요청 생성 (승인 시스템)
+export const createMemberEditProposalService = async (proposalData) => {
+    try {
+        console.log('🔄 사원 정보 수정 요청 생성 API 호출 시작:', {
+            memberId: proposalData.memberId,
+            targetField: proposalData.targetField,
+            originalValue: proposalData.originalValue,
+            requestedValue: proposalData.requestedValue,
+            reason: proposalData.reason
+        })
+
+        const response = await api.post(API.MEMBER.EDIT_PROPOSALS, proposalData);
+
+        console.log('✅ 사원 정보 수정 요청 생성 API 응답:', response.data)
+        return response.data;
+    } catch (error) {
+        console.error('❌ 사원 정보 수정 요청 생성 API 오류:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            targetField: proposalData.targetField
+        })
+
+        // 409 에러(중복 요청) 처리
+        if (error.response && error.response.status === 409) {
+            const errorMessage = error.response.data?.message || '같은 필드에 대해 이미 대기중인 수정 요청이 존재합니다.';
+            const fieldName = {
+                'NAME': '이름',
+                'PHONE': '연락처',
+                'EMAIL': '이메일',
+                'ADDRESS': '주소'
+            }[proposalData.targetField] || proposalData.targetField;
+
+            throw new Error(`${fieldName} 수정 요청 실패: ${errorMessage}`);
+        }
+
+        throw error;
+    }
+};
+
+// 대기중인 사원 정보 수정 요청 조회
+export const getMemberEditProposalsService = async (memberId) => {
+    try {
+        console.log('사원 정보 수정 요청 조회 API 호출 시작:', memberId)
+        const response = await api.get(API.MEMBER.EDIT_PROPOSALS, {
+            params: { memberId }
+        });
+        console.log('사원 정보 수정 요청 조회 API 응답:', response.data)
+        return response.data;
+    } catch (error) {
+        console.error('사원 정보 수정 요청 조회 API 오류:', error)
+        throw error;
+    }
+};
+
+// 내 정보 직접 수정 (승인 시스템 우회)
 export const updateMyInfoService = async (memberData) => {
     try {
         console.log('내 정보 수정 API 호출 시작:', memberData)
@@ -142,34 +198,54 @@ export const profileImageFetchService = async (memberId) => {
     }
 };
 
-export const profileImageUploadService = async (memberId, profileImage) => {
+export const profileImageUploadService = async (memberId, formDataOrFile) => {
     try {
-        // 파일 검증
-        if (!profileImage) {
+        let formData;
+        let fileInfo = {};
+
+        // FormData 또는 File 객체 처리
+        if (formDataOrFile instanceof FormData) {
+            formData = formDataOrFile;
+            // FormData에서 파일 정보 추출 (로깅용)
+            const file = formData.get('file');
+            if (file && file instanceof File) {
+                fileInfo = {
+                    fileName: file.name,
+                    size: file.size,
+                    type: file.type
+                };
+            }
+        } else if (formDataOrFile instanceof File) {
+            // File 객체인 경우 FormData 생성
+            const file = formDataOrFile;
+
+            // 파일 타입 검증
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                throw new Error('JPG, PNG, WEBP 형식의 이미지만 업로드 가능합니다.');
+            }
+
+            // 파일 크기 검증 (5MB 이하)
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                throw new Error('프로필 이미지는 5MB 이하만 업로드 가능합니다.');
+            }
+
+            formData = new FormData();
+            formData.append('file', file);
+
+            fileInfo = {
+                fileName: file.name,
+                size: file.size,
+                type: file.type
+            };
+        } else {
             throw new Error('프로필 이미지는 필수입니다.');
         }
 
-        // 파일 타입 검증
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-        if (!allowedTypes.includes(profileImage.type)) {
-            throw new Error('JPG, PNG, WEBP 형식의 이미지만 업로드 가능합니다.');
-        }
-
-        // 파일 크기 검증 (5MB 이하)
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        if (profileImage.size > maxSize) {
-            throw new Error('프로필 이미지는 5MB 이하만 업로드 가능합니다.');
-        }
-
-        // FormData 생성 (fileName 파라미터 제거)
-        const formData = new FormData();
-        formData.append('file', profileImage); // 기존 'file' 파라미터명 유지
-
         console.log('프로필 이미지 업로드 API 호출:', {
             memberId,
-            fileName: profileImage.name,
-            size: profileImage.size,
-            type: profileImage.type
+            ...fileInfo
         });
 
         const response = await api.put(API.MEMBER.PROFILE_IMAGE(memberId), formData, {

@@ -9,9 +9,9 @@
                     <p class="text-body-2 text-grey-darken-1 ma-0">상세 정보 및 근태 기록을 확인하세요</p>
                 </div>
             </div>
-            <v-chip color="primary" variant="outlined" size="large" prepend-icon="mdi-file-document-edit-outline">
+            <!-- <v-chip color="primary" variant="outlined" size="large" prepend-icon="mdi-file-document-edit-outline">
                 수정요청서 확인
-            </v-chip>
+            </v-chip> -->
         </div>
 
         <v-row>
@@ -262,10 +262,10 @@
 
         <!-- 하단 액션 버튼 -->
         <div class="d-flex justify-center mt-8">
-            <v-btn color="primary" size="large" min-width="150" prepend-icon="mdi-pencil" @click="handleEdit"
+            <!-- <v-btn color="primary" size="large" min-width="150" prepend-icon="mdi-pencil" @click="handleEdit"
                 class="action-button">
                 정보 수정
-            </v-btn>
+            </v-btn> -->
         </div>
     </v-container>
 </template>
@@ -307,7 +307,6 @@ const {
     loadAttendanceData,
     handleImageError,
     handleImageLoad,
-    handleEdit
 } = useAttendanceDetail(memberId)
 
 // 유틸리티 상수
@@ -325,7 +324,8 @@ onMounted(() => {
 })
 
 // 월 변경 감지
-watch(selectedMonth, () => {
+watch(selectedMonth, (newMonth) => {
+    console.log('📅 월 변경 감지:', newMonth)
     loadAttendanceData()
 })
 </script>
