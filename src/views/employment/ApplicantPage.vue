@@ -546,7 +546,7 @@ const cancelAssign = () => {
 
 // 할당 확인 메시지 생성
 const getAssignConfirmMessage = () => {
-  return `다음 지원자들은 이미 실무테스트가 할당되어 있습니다:\n\n${alreadyAssignedNames.value}\n\n계속 진행하시겠습니까? 이미 할당된 지원자에게는 새로운 실무테스트가 중복으로 할당됩니다.`
+  return `다음 지원자들은 이미 실무테스트가 할당되어 있습니다: ${alreadyAssignedNames.value}\n계속 진행하시겠습니까?`
 }
 
 const handleJobtestSelected = async (jobtest) => {
