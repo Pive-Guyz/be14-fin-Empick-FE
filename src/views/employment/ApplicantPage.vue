@@ -196,8 +196,14 @@
       </v-card-text>
 
       <!-- 📋 지원자 테이블 -->
-      <v-data-table :headers="tableHeaders" :items="applicantStore.filteredAndSortedApplicants" :items-per-page="8"
-        item-key="uniqueKey" class="elevation-1" @update:options="handleSort" return-object>
+      <v-data-table 
+        :headers="tableHeaders" 
+        :items="applicantStore.filteredAndSortedApplicants" 
+        :items-per-page="8"
+        item-key="uniqueKey" 
+        class="elevation-1" 
+        @update:options="handleSort" 
+        return-object>
 
         <!-- 전체 선택 체크박스 헤더 -->
         <template #header.select>
@@ -245,8 +251,8 @@
 
         <!-- 실무테스트 상태 -->
         <template #item.jobtestStatus="{ item }">
-          <v-chip :color="item.applicationJobtestTitle ? 'primary' : 'grey'" variant="tonal" size="small">
-            {{ item.applicationJobtestTitle ? '할당됨' : '할당안됨' }}
+          <v-chip :color="item.jobtestStatus === 'ASSIGNED' ? 'primary' : 'grey'" variant="tonal" size="small">
+            {{ item.jobtestStatus === 'ASSIGNED' ? '할당됨' : '할당안됨' }}
           </v-chip>
         </template>
 
