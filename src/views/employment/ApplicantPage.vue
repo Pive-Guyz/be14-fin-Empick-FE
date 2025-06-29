@@ -325,15 +325,7 @@
       @cancel="handleEmailPreviewCancel"
     />
 
-    <!-- 실무테스트 할당 확인 모달 -->
-    <AlertModal 
-      v-if="assignConfirmModal"
-      :message="getAssignConfirmMessage()"
-      confirm-text="계속 진행"
-      cancel-text="취소"
-      @confirm="confirmAssignWithAlreadyAssigned"
-      @cancel="cancelAssign"
-    />
+
   </v-container>
 </template>
 
@@ -359,7 +351,7 @@ import ApplicationJobtestDTO from '@/dto/employment/jobtest/createApplicationJob
 import JobtestSelectModal from '@/components/employment/JobtestSelectModal.vue';
 import SelectEmailModal from '@/components/mail/SelectEmailModal.vue';
 import EmailPreviewModal from '@/components/mail/EmailPreviewModal.vue';
-import AlertModal from '@/components/common/AlertModal.vue';
+
 
 // ===== Store 및 기본 설정 =====
 const toast = useToast();
@@ -394,8 +386,7 @@ const selectedEmailType = ref('');
 const sendingEmail = ref(false);
 const emailLoadingScreen = ref(false);
 const emailSuccessModal = ref(false);
-const assignConfirmModal = ref(false);
-const alreadyAssignedNames = ref('');
+
 
 // 필터 상태 (Store와 연결)
 const statusFilter = computed({
@@ -513,12 +504,15 @@ const handleAssignClick = async () => {
   )
 
   if (alreadyAssignedApplicants.length > 0) {
-    alreadyAssignedNames.value = alreadyAssignedApplicants.map(a => a.name).join(', ')
-    assignConfirmModal.value = true
-    return
+    const alreadyAssignedNames = alreadyAssignedApplicants.map(a => a.name).join(', ')
+    const confirmed = confirm(`다음 지원자들은 이미 실무테스트가 할당되어 있습니다: ${alreadyAssignedNames}\n계속 진행하시겠습니까?`)
+    
+    if (!confirmed) {
+      return
+    }
   }
 
-  // 할당되지 않은 지원자들만 있는 경우 바로 실무테스트 선택 모달 열기
+  // 실무테스트 선택 모달 열기
   await openJobtestSelectModal()
 }
 
@@ -533,21 +527,7 @@ const openJobtestSelectModal = async () => {
   }
 }
 
-// 이미 할당된 지원자가 있을 때 확인 후 계속 진행
-const confirmAssignWithAlreadyAssigned = async () => {
-  assignConfirmModal.value = false
-  await openJobtestSelectModal()
-}
 
-// 할당 취소
-const cancelAssign = () => {
-  assignConfirmModal.value = false
-}
-
-// 할당 확인 메시지 생성
-const getAssignConfirmMessage = () => {
-  return `다음 지원자들은 이미 실무테스트가 할당되어 있습니다: ${alreadyAssignedNames.value}\n계속 진행하시겠습니까?`
-}
 
 const handleJobtestSelected = async (jobtest) => {
   jobtestModal.value = false

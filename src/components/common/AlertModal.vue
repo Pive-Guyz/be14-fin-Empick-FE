@@ -89,7 +89,7 @@ defineEmits(['confirm', 'cancel'])
   line-height: 1.5;
   margin: 0;
   font-weight: 500;
-  white-space: pre-line;
+
 }
 
 .modal-buttons {
