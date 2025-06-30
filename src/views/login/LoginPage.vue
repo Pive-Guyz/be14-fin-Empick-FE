@@ -33,11 +33,11 @@
               class="custom-field"></v-text-field>
           </div>
 
-          <div class="forgot-password">
+          <!-- <div class="forgot-password">
             <router-link to="/forgot-password" class="forgot-link">
               비밀번호를 잊으셨나요?
             </router-link>
-          </div>
+          </div> -->
 
           <v-btn type="submit" color="primary" :loading="authStore.loading"
             :disabled="!isFormValid || authStore.loading" block class="login-button" size="large" elevation="2">
@@ -53,7 +53,7 @@
       </div>
 
       <div class="footer-text">
-        <p>© 2024 EMPICK. All rights reserved.</p>
+        <p>© 2025 EMPICK. All rights reserved.</p>
       </div>
     </div>
   </div>
@@ -180,7 +180,7 @@ const handleLogin = async () => {
   max-width: 450px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  padding: 3rem 2.5rem;
+  padding: 2rem 2.5rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   border-radius: 20px;
   margin: 1rem;
@@ -191,7 +191,7 @@ const handleLogin = async () => {
 
 .logo-area {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .logo {
@@ -202,7 +202,7 @@ const handleLogin = async () => {
 
 .welcome-section {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.8rem;
 }
 
 .main-title {
@@ -232,19 +232,19 @@ const handleLogin = async () => {
 }
 
 .login-form-container {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .login-title {
   text-align: center;
   color: #2c3e50;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-size: 1.4rem;
   font-weight: 600;
 }
 
 .form-field {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
 }
 
 .custom-field {
@@ -280,7 +280,7 @@ const handleLogin = async () => {
 }
 
 .login-button {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   height: 56px;
   font-size: 1.1rem;
   font-weight: 600;
@@ -337,7 +337,7 @@ const handleLogin = async () => {
 /* 반응형 디자인 */
 @media (max-width: 480px) {
   .login-box {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1.5rem;
     margin: 0.5rem;
   }
 
